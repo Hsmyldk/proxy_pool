@@ -8,6 +8,7 @@
 -------------------------------------------------
    Change Activity:
                    2026/05/28:
+                   2026/10/12: 同步随机二选一校验配置项
 -------------------------------------------------
 """
 __author__ = 'JHao'
@@ -21,8 +22,9 @@ from handler.configHandler import ConfigHandler
 @pytest.fixture(autouse=True)
 def clean_env():
     """测试前后清理可能设置的环境变量"""
-    env_keys = ["DB_CONN", "PORT", "HOST", "TABLE_NAME", "HTTP_URL",
-                "HTTPS_URL", "VERIFY_TIMEOUT", "MAX_FAIL_COUNT",
+    env_keys = ["DB_CONN", "PORT", "HOST", "TABLE_NAME", "VERIFY_UUID_URL",
+                "VERIFY_TEXT_URL", "VERIFY_TEXT_KEYWORD", "HTTPS_URL",
+                "VERIFY_TIMEOUT", "MAX_FAIL_COUNT",
                 "POOL_SIZE_MIN", "PROXY_REGION", "TIMEZONE"]
     saved = {k: os.environ.get(k) for k in env_keys}
     for k in env_keys:
@@ -54,8 +56,14 @@ class TestConfigHandlerDefaults:
     def test_table_name_default(self, conf):
         assert conf.tableName == setting.TABLE_NAME
 
-    def test_http_url_default(self, conf):
-        assert conf.httpUrl == setting.HTTP_URL
+    def test_verify_uuid_url_default(self, conf):
+        assert conf.verifyUuidUrl == setting.VERIFY_UUID_URL
+
+    def test_verify_text_url_default(self, conf):
+        assert conf.verifyTextUrl == setting.VERIFY_TEXT_URL
+
+    def test_verify_text_keyword_default(self, conf):
+        assert conf.verifyTextKeyword == setting.VERIFY_TEXT_KEYWORD
 
     def test_https_url_default(self, conf):
         assert conf.httpsUrl == setting.HTTPS_URL
@@ -87,6 +95,16 @@ class TestConfigHandlerEnvOverride:
         os.environ["PORT"] = "8080"
         conf = ConfigHandler()
         assert str(conf.serverPort) == "8080"
+
+    def test_verify_uuid_url_override(self):
+        os.environ["VERIFY_UUID_URL"] = "https://example.com/uuid"
+        conf = ConfigHandler()
+        assert conf.verifyUuidUrl == "https://example.com/uuid"
+
+    def test_verify_text_keyword_override(self):
+        os.environ["VERIFY_TEXT_KEYWORD"] = "hello"
+        conf = ConfigHandler()
+        assert conf.verifyTextKeyword == "hello"
 
     def test_verify_timeout_override(self):
         os.environ["VERIFY_TIMEOUT"] = "30"

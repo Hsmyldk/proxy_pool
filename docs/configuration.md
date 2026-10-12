@@ -71,21 +71,37 @@ PROXY_FETCHER_EXCLUDE = [
 
 ## 校验配置
 
-### `HTTP_URL`
+### `VERIFY_UUID_URL`
 
-用于检验代理是否可用的地址。
+代理可用性校验方式1 的目标地址：通过代理访问该地址，响应 JSON 中需包含 `uuid` 字段。
 
-- 默认值：`"http://httpbin.org"`
+- 默认值：`"http://httpbin.org/uuid"`
+
+### `VERIFY_TEXT_URL`
+
+代理可用性校验方式2 的目标地址：通过代理访问该地址，响应文本中需包含 `VERIFY_TEXT_KEYWORD`。
+
+- 默认值：`"http://geo.brdtest.com/welcome.txt?product=dc&method=native"`
+
+### `VERIFY_TEXT_KEYWORD`
+
+方式2 需要匹配的响应关键字。
+
+- 默认值：`"Welcome to Bright Data"`
+
+以上两种方式**每次校验随机选择一种执行**，判定结果写入代理的 `last_status` 字段。
+
+> 两个校验目标都用 http 协议，因此只要求代理支持 HTTP 转发，不要求支持 HTTPS CONNECT。若改成 https 目标，绝大多数免费代理会因无法建立 CONNECT 隧道而被判为不可用（实测通过率会从约 37% 降到约 3%）。
 
 ### `HTTPS_URL`
 
-用于检验代理是否支持 HTTPS 的地址。
+用于检验代理是否支持 HTTPS 的地址，决定代理的 `https` 属性（`/get?type=https` 依赖该属性）。
 
 - 默认值：`"https://www.qq.com"`
 
 ### `VERIFY_TIMEOUT`
 
-检验代理的超时时间，单位秒。使用代理访问 `HTTP_URL` / `HTTPS_URL` 耗时超过 `VERIFY_TIMEOUT` 时，视为代理不可用。
+检验代理的超时时间，单位秒。使用代理访问 `VERIFY_UUID_URL` / `VERIFY_TEXT_URL` / `HTTPS_URL` 耗时超过 `VERIFY_TIMEOUT` 时，视为不可用。
 
 - 默认值：`10`
 

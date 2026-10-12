@@ -26,7 +26,7 @@ tests/
 │   ├── test_proxy.py        # Proxy 类：构造、序列化、setter、add_source
 │   ├── test_db_client.py    # DbClient.parseDbConn URI 解析
 │   ├── test_config.py       # ConfigHandler 环境变量覆盖
-│   ├── test_validator.py    # formatValidator 正则匹配
+│   ├── test_validator.py    # formatValidator 正则、两种可用性校验方式、随机分派
 │   ├── test_base_fetcher.py # BaseFetcher 基类解析方法
 │   └── test_fetcher_sources.py # 各代理源 fetcher yield 逻辑
 ├── api/                     # Flask 测试客户端，mock ProxyHandler
@@ -56,7 +56,7 @@ tests/
 - **爬取器** (`fetcher/`)：插件架构。`baseFetcher.py` 定义 `BaseFetcher` 基类（提供 `parseProxiesFromText`/`yieldUniqueProxies` 共享方法，约定 `name`/`url`/`enabled` 属性和 `fetch()` 方法）。每个代理源在 `sources/` 目录下独立文件，继承 `BaseFetcher`。调度器自动扫描目录加载 `enabled=True` 的源。`setting.py` 的 `PROXY_FETCHER_EXCLUDE` 黑名单可临时禁用指定源。
 - **数据库层** (`db/`)：抽象 `dbClient` 接口，包含 Redis (`redisClient.py`) 和 SSDB (`ssdbClient.py`) 两种实现。通过 `setting.py` 中的 `DB_CONN` 配置连接（格式：`redis://:pwd@ip:port/db` 或 `ssdb://:pwd@ip:port`）。
 - **调度器** (`helper/scheduler.py`)：基于 APScheduler 的定时任务，驱动爬取器运行并触发验证。时区通过 `setting.py` 中的 `TIMEZONE` 配置。
-- **验证器** (`helper/validator.py`)：使用 `HTTP_URL` (http://httpbin.org) 和 `HTTPS_URL` (https://www.qq.com) 测试代理，超时时间由 `VERIFY_TIMEOUT` 指定（默认 10 秒）。超过 `MAX_FAIL_COUNT` 的代理会被移除。当代理池数量低于 `POOL_SIZE_MIN`（默认 20）时触发重新爬取。
+- **验证器** (`helper/validator.py`)：可用性校验每次从两种方式中随机选一种：方式1 `VERIFY_UUID_URL` (http://httpbin.org/uuid) 要求响应 JSON 含 `uuid`；方式2 `VERIFY_TEXT_URL` (http://geo.brdtest.com/welcome.txt?product=dc&method=native) 要求响应文本含 `VERIFY_TEXT_KEYWORD`（默认 "Welcome to Bright Data"）。两个目标均为 http，不要求代理支持 HTTPS CONNECT。`HTTPS_URL` (https://www.qq.com) 单独探测代理是否支持 HTTPS，决定 `https` 属性。超时时间由 `VERIFY_TIMEOUT` 指定（默认 10 秒）。超过 `MAX_FAIL_COUNT` 的代理会被移除。当代理池数量低于 `POOL_SIZE_MIN`（默认 20）时触发重新爬取。
 - **API** (`api/proxyApi.py`)：Flask 接口，包含以下端点：
   - `/get`：随机获取一个代理（`?type=https` 可筛选 HTTPS 代理）
   - `/pop`：获取并删除一个代理
@@ -75,7 +75,9 @@ tests/
 - `HOST`/`PORT`：API 绑定的地址和端口
 - `DB_CONN`：数据库连接字符串
 - `PROXY_FETCHER_EXCLUDE`：爬取器黑名单（自动扫描 `enabled=True` 的源，排除黑名单中的）
-- `HTTP_URL`/`HTTPS_URL`：验证目标 URL
+- `VERIFY_UUID_URL`：可用性校验方式1 目标（响应需含 `uuid`）
+- `VERIFY_TEXT_URL`/`VERIFY_TEXT_KEYWORD`：可用性校验方式2 目标与匹配关键字
+- `HTTPS_URL`：HTTPS 支持检测目标 URL
 - `VERIFY_TIMEOUT`：验证超时时间（默认 10 秒）
 - `MAX_FAIL_COUNT`：代理被移除前允许的最大失败次数
 - `POOL_SIZE_MIN`：触发重新爬取的最小代理池数量阈值
@@ -104,7 +106,7 @@ tests/
 - **类命名**：帕斯卡命名，如 `ProxyFetcher`、`RedisClient`、`SsdbClient`、`ProxyValidator`
 - **方法命名**：混合风格——数据库/爬取器方法使用驼峰命名（`getAll`、`getCount`、`changeTable`、`parseProxiesFromText`），属性和辅助方法使用下划线命名（`user_agent`、`fail_count`、`check_count`）
 - **爬取器文件**：小写命名（如 `zdaye.py`、`kuaidaili.py`），类名 PascalCase（如 `ZdayeFetcher`、`KuaidailiFetcher`）
-- **常量**（在 `setting.py` 中）：大写下划线命名（`DB_CONN`、`PROXY_FETCHER_EXCLUDE`、`HTTP_URL`、`MAX_FAIL_COUNT`）
+- **常量**（在 `setting.py` 中）：大写下划线命名（`DB_CONN`、`PROXY_FETCHER_EXCLUDE`、`VERIFY_UUID_URL`、`VERIFY_TEXT_URL`、`MAX_FAIL_COUNT`）
 - **变量**：下划线命名（`proxy_obj`、`proxy_str`、`https`）
 - **注释/文档字符串**：源文件头部和行内注释通常使用中文（普通话）
 - **单例模式**：使用自定义 `Singleton` 元类（`util/singleton.py`）结合 `six.withMetaclass` 实现

@@ -8,6 +8,7 @@
 -------------------------------------------------
    Change Activity:
                    2020/6/22:
+                    2026/10/12: httpUrl拆分为随机二选一的校验目标配置
 -------------------------------------------------
 """
 __author__ = 'JHao'
@@ -46,8 +47,16 @@ class ConfigHandler(withMetaclass(Singleton)):
         return getattr(setting, 'PROXY_FETCHER_EXCLUDE', [])
 
     @LazyProperty
-    def httpUrl(self):
-        return os.getenv("HTTP_URL", setting.HTTP_URL)
+    def verifyUuidUrl(self):
+        return os.getenv("VERIFY_UUID_URL", setting.VERIFY_UUID_URL)
+
+    @LazyProperty
+    def verifyTextUrl(self):
+        return os.getenv("VERIFY_TEXT_URL", setting.VERIFY_TEXT_URL)
+
+    @LazyProperty
+    def verifyTextKeyword(self):
+        return os.getenv("VERIFY_TEXT_KEYWORD", setting.VERIFY_TEXT_KEYWORD)
 
     @LazyProperty
     def httpsUrl(self):

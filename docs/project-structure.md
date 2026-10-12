@@ -74,7 +74,7 @@ Flask 应用，提供 `/get`、`/pop`、`/all`、`/count`、`/delete` 等接口�
 
 ### `helper/validator.py` — 代理校验
 
-使用 `HTTP_URL` 和 `HTTPS_URL` 测试代理可用性，超过 `MAX_FAIL_COUNT` 次失败的代理会被移除。
+可用性校验每次从两种方式中随机选一种：`VERIFY_UUID_URL` 要求响应 JSON 含 `uuid`，`VERIFY_TEXT_URL` 要求响应文本含 `VERIFY_TEXT_KEYWORD`。`HTTPS_URL` 单独探测代理是否支持 HTTPS。超过 `MAX_FAIL_COUNT` 次失败的代理会被移除。
 
 ### `handler/` — 业务处理
 

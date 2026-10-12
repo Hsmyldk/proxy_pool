@@ -8,6 +8,8 @@
 -------------------------------------------------
    Change Activity:
                    2019/2/15:
+                    2026/10/12: 代理可用性校验配置改为随机二选一
+                    2026/10/12: 校验目标改为http, 兼容仅支持HTTP转发的代理
 -------------------------------------------------
 """
 
@@ -34,10 +36,11 @@ PORT = 5010
 
 # ############### database config ###################
 # db connection uri
+# 真实连接串请通过环境变量 DB_CONN 注入(configHandler 会优先读取该变量), 不要提交到版本库
 # example:
 #      Redis: redis://:password@ip:port/db
 #      Ssdb:  ssdb://:password@ip:port
-DB_CONN = 'redis://:pwdstring@127.0.0.1:6379/0'
+DB_CONN = 'redis://:password@127.0.0.1:6379/0'
 
 # proxy table name
 TABLE_NAME = 'use_proxy'
@@ -49,9 +52,16 @@ TABLE_NAME = 'use_proxy'
 PROXY_FETCHER_EXCLUDE = []
 
 # ############# proxy validator #################
-# 代理验证目标网站
-HTTP_URL = "http://httpbin.org"
+# 代理可用性校验: 以下两种方式每次校验随机选一种执行
+# 两个目标都用http, 以免要求代理必须支持HTTPS CONNECT(多数免费代理仅支持HTTP转发)
+# 方式1: 通过代理访问该地址, 响应JSON中需含uuid字段
+VERIFY_UUID_URL = "http://httpbin.org/uuid"
 
+# 方式2: 通过代理访问该地址, 响应文本中需含VERIFY_TEXT_KEYWORD
+VERIFY_TEXT_URL = "http://geo.brdtest.com/welcome.txt?product=dc&method=native"
+VERIFY_TEXT_KEYWORD = "Welcome to Bright Data"
+
+# 代理https支持检测目标网站
 HTTPS_URL = "https://www.qq.com"
 
 # 代理验证时超时时间

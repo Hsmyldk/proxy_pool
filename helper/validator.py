@@ -8,12 +8,14 @@
 -------------------------------------------------
    Change Activity:
                    2023/03/10: 支持带用户认证的代理格式 username:password@ip:port
+                   2026/10/12: 可用性校验改为随机二选一(httpbin uuid / brdtest 关键字)
 -------------------------------------------------
 """
 __author__ = 'JHao'
 
 import re
-from requests import head
+import random
+from requests import get, head
 from util.six import withMetaclass
 from util.singleton import Singleton
 from handler.configHandler import ConfigHandler
@@ -55,17 +57,37 @@ def formatValidator(proxy):
     return True if IP_REGEX.fullmatch(proxy) else False
 
 
-@ProxyValidator.addHttpValidator
-def httpTimeOutValidator(proxy):
-    """ http检测超时 """
+def verifyByHttpbinUuid(proxy):
+    """ 方式1: 通过代理访问httpbin uuid接口, 响应JSON含uuid字段则可用 """
 
     proxies = {"http": "http://{proxy}".format(proxy=proxy), "https": "https://{proxy}".format(proxy=proxy)}
 
     try:
-        r = head(conf.httpUrl, headers=HEADER, proxies=proxies, timeout=conf.verifyTimeout)
-        return True if r.status_code == 200 else False
+        r = get(conf.verifyUuidUrl, headers=HEADER, proxies=proxies,
+                timeout=conf.verifyTimeout, verify=False)
+        return True if r.status_code == 200 and r.json().get("uuid") else False
     except Exception as e:
         return False
+
+
+def verifyByBrightDataText(proxy):
+    """ 方式2: 通过代理访问brdtest welcome.txt, 响应文本含关键字则可用 """
+
+    proxies = {"http": "http://{proxy}".format(proxy=proxy), "https": "https://{proxy}".format(proxy=proxy)}
+
+    try:
+        r = get(conf.verifyTextUrl, headers=HEADER, proxies=proxies,
+                timeout=conf.verifyTimeout, verify=False)
+        return True if r.status_code == 200 and conf.verifyTextKeyword in r.text else False
+    except Exception as e:
+        return False
+
+
+@ProxyValidator.addHttpValidator
+def randomHttpValidator(proxy):
+    """ 可用性校验: 两种方式每次校验随机选一种执行 """
+
+    return random.choice((verifyByHttpbinUuid, verifyByBrightDataText))(proxy)
 
 
 @ProxyValidator.addHttpsValidator

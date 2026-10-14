@@ -14,8 +14,9 @@ __pycache__/
 *.egg-info/
 .pytest_cache/
 
-# 运行期产物
+# 运行期产物(容器内 log 目录由 logHandler 自动创建)
 proxy_pool.pid
+log/*.log
 
 # 编辑器
 .idea/

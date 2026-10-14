@@ -32,6 +32,8 @@
 22. 将实测失效的 **66代理**、 **FreeVPNNode**、 **开心代理**、 **Docip**、 **站大爷** 加入采集黑名单; (2026-10-14)
 23. 新增《代理源调研记录》文档，沉淀各源实测状态、失效原因与避坑清单; (2026-10-14)
 24. **修复 Docker 镜像无法启动**: alpine 基础镜像缺少 `bash`, 已在 Dockerfile 中补装; 新增 `.gitattributes` 固定 `proxy_pool.sh` 为 LF 行尾(容器内用 sed 兜底修正 CRLF); 新增 `.dockerignore` 排除 `.venv` 等, 镜像体积 260MB → 163MB; (2026-10-14)
+25. **修复容器内 schedule 进程崩溃**: `requirements.txt` 补充 `tzdata` 依赖 —— APScheduler 通过 `zoneinfo` 解析 `TIMEZONE`, 而精简镜像删除了系统时区库, 缺少该包会报 `ZoneInfoNotFoundError: No time zone found with key Asia/Shanghai` 并导致定时采集/复检停摆; (2026-10-14)
+26. **采集/复检防任务堆叠**: 加互斥锁并设置 `max_instances=1`/`coalesce=True`, 上一轮未校验完成时跳过本次触发(不再并发重复抓取同一批源), 正常/异常结束均释放锁; (2026-10-14)
 
 ## 2.4.2 (2024-01-18)
 

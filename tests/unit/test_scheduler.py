@@ -53,6 +53,54 @@ class TestRunProxyFetch:
         assert call_args[0][0] == "raw"
 
 
+class TestConcurrencyGuard:
+    """上一轮未跑完时跳过本次触发（防任务堆积）"""
+
+    @patch("helper.scheduler.Fetcher")
+    def test_fetch_skipped_when_previous_round_running(self, mock_fetcher_cls):
+        """采集锁被占用 -> 直接跳过, 不创建 Fetcher"""
+        assert scheduler_mod._fetch_lock.acquire(blocking=False)
+        try:
+            _get_attr("__runProxyFetch")()
+            mock_fetcher_cls.assert_not_called()
+        finally:
+            scheduler_mod._fetch_lock.release()
+
+    @patch("helper.scheduler.ProxyHandler")
+    def test_check_skipped_when_previous_round_running(self, mock_ph_cls):
+        """复检锁被占用 -> 直接跳过, 不读代理池"""
+        assert scheduler_mod._check_lock.acquire(blocking=False)
+        try:
+            _get_attr("__runProxyCheck")()
+            mock_ph_cls.assert_not_called()
+        finally:
+            scheduler_mod._check_lock.release()
+
+    @patch("helper.scheduler.Checker")
+    @patch("helper.scheduler.Fetcher")
+    def test_fetch_lock_released_after_success(self, mock_fetcher_cls, mock_checker):
+        """正常跑完后必须释放锁, 否则后续轮次会被永久跳过"""
+        mock_fetcher = MagicMock()
+        mock_fetcher.run.return_value = iter([])
+        mock_fetcher_cls.return_value = mock_fetcher
+
+        _get_attr("__runProxyFetch")()
+
+        assert scheduler_mod._fetch_lock.acquire(blocking=False) is True
+        scheduler_mod._fetch_lock.release()
+
+    @patch("helper.scheduler.Fetcher")
+    def test_fetch_lock_released_on_exception(self, mock_fetcher_cls):
+        """采集过程抛异常也要释放锁"""
+        mock_fetcher_cls.side_effect = RuntimeError("boom")
+
+        with pytest.raises(RuntimeError):
+            _get_attr("__runProxyFetch")()
+
+        assert scheduler_mod._fetch_lock.acquire(blocking=False) is True
+        scheduler_mod._fetch_lock.release()
+
+
 class TestRunProxyCheck:
 
     @patch("helper.scheduler.__runProxyFetch")
@@ -167,3 +215,23 @@ class TestRunScheduler:
         calls = mock_sched.add_job.call_args_list
         assert calls[0][1]["minutes"] == 45
         assert calls[1][1]["minutes"] == 7
+
+    @patch("helper.scheduler.BlockingScheduler")
+    @patch("helper.scheduler.__runProxyFetch")
+    @patch("helper.scheduler.ConfigHandler")
+    @patch("helper.scheduler.LogHandler")
+    def test_job_defaults_prevent_overlap(self, mock_log, mock_conf_cls, mock_fetch, mock_sched_cls):
+        """job_defaults 必须禁止同一任务并发, 并合并错过的触发"""
+        mock_conf = MagicMock()
+        mock_conf.timezone = "Asia/Shanghai"
+        mock_conf.fetchIntervalMinutes = 30
+        mock_conf.checkIntervalMinutes = 2
+        mock_conf_cls.return_value = mock_conf
+        mock_sched = MagicMock()
+        mock_sched_cls.return_value = mock_sched
+
+        scheduler_mod.runScheduler()
+
+        _, kwargs = mock_sched.configure.call_args
+        assert kwargs["job_defaults"]["max_instances"] == 1
+        assert kwargs["job_defaults"]["coalesce"] is True

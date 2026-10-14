@@ -8,3 +8,7 @@ APScheduler==3.2.0;python_version<"3.10"
 click==8.0.1
 Flask==2.1.1
 werkzeug>=2.0,<2.2
+# APScheduler 3.11 用 zoneinfo 解析 TIMEZONE 配置;
+# 精简镜像(如 alpine, Dockerfile 中删除了系统 tzdata)需要该包提供时区数据,
+# 否则报 "ZoneInfoNotFoundError: No time zone found with key Asia/Shanghai"
+tzdata>=2024.1

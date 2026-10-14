@@ -90,4 +90,5 @@ nav:
   - 开发指南:
       - 扩展代理源: extending/fetcher.md
       - 扩展校验器: extending/validator.md
+      - 代理源调研记录: proxy-sources-survey.md
   - 变更日志: changelog.md

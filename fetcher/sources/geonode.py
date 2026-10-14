@@ -8,6 +8,7 @@
 -------------------------------------------------
    Change Activity:
                    2026/05/31:
+                   2026/10/14: 移除失效的filterLastChecked参数, 并过滤掉socks代理
 -------------------------------------------------
 """
 __author__ = 'JHao'
@@ -26,15 +27,19 @@ class GeonodeFetcher(BaseFetcher):
     url = "https://geonode.com/"
 
     def fetch(self):
+        # filterLastChecked 参数已失效(带上它接口恒返回空), 故不再使用
         url = ("https://proxylist.geonode.com/api/proxy-list?"
-               "filterLastChecked=10&page=1&limit=100&sort_by=lastChecked&sort_type=desc")
+               "page=1&limit=100&sort_by=lastChecked&sort_type=desc")
         r = WebRequest().get(url, timeout=5, retry_time=1, verify=False)
         try:
             proxies = []
             for item in r.json.get("data", []):
                 ip = item.get("ip", "")
                 port = item.get("port", "")
-                if ip and port:
+                protocols = [str(p).lower() for p in (item.get("protocols") or [])]
+                # 只保留http/https代理(项目不支持socks); 无protocols字段时不作过滤
+                if ip and port and (not protocols
+                                    or any(p in ("http", "https") for p in protocols)):
                     proxies.append("%s:%s" % (ip, port))
             if not proxies:
                 proxies = self.parseProxiesFromText(r.text)

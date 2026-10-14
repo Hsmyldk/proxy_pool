@@ -9,6 +9,7 @@
    Change Activity:
                    2020/6/22:
                     2026/10/12: httpUrl拆分为随机二选一的校验目标配置
+                    2026/10/14: 新增https兜底校验开关与采集/检查间隔配置
 -------------------------------------------------
 """
 __author__ = 'JHao'
@@ -63,6 +64,12 @@ class ConfigHandler(withMetaclass(Singleton)):
         return os.getenv("HTTPS_URL", setting.HTTPS_URL)
 
     @LazyProperty
+    def verifyHttpsFallback(self):
+        """http校验失败后是否再用https兜底探测(仅支持https转发的代理也能入池)"""
+        return str(os.getenv("VERIFY_HTTPS_FALLBACK", setting.VERIFY_HTTPS_FALLBACK)
+                   ).strip().lower() not in ("0", "false", "no", "off")
+
+    @LazyProperty
     def verifyTimeout(self):
         return int(os.getenv("VERIFY_TIMEOUT", setting.VERIFY_TIMEOUT))
 
@@ -81,6 +88,14 @@ class ConfigHandler(withMetaclass(Singleton)):
     @LazyProperty
     def poolSizeMin(self):
         return int(os.getenv("POOL_SIZE_MIN", setting.POOL_SIZE_MIN))
+
+    @LazyProperty
+    def fetchIntervalMinutes(self):
+        return int(os.getenv("FETCH_INTERVAL_MINUTES", setting.FETCH_INTERVAL_MINUTES))
+
+    @LazyProperty
+    def checkIntervalMinutes(self):
+        return int(os.getenv("CHECK_INTERVAL_MINUTES", setting.CHECK_INTERVAL_MINUTES))
 
     @LazyProperty
     def proxyRegion(self):

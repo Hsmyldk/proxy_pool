@@ -72,6 +72,11 @@ class TestFetcherInterface(object):
         ("fetcher.sources.roundproxies", "RoundProxiesFetcher"),
         ("fetcher.sources.openproxylist", "OpenProxyListFetcher"),
         ("fetcher.sources.scdntext", "ScdnTextFetcher"),
+        ("fetcher.sources.monosans", "MonosansFetcher"),
+        ("fetcher.sources.thespeedx", "TheSpeedXFetcher"),
+        ("fetcher.sources.proxyscrape", "ProxyScrapeFetcher"),
+        ("fetcher.sources.spysme", "SpysMeFetcher"),
+        ("fetcher.sources.freeproxylist", "FreeProxyListFetcher"),
     ]
 
     def test_all_fetchers_have_name_url_enabled(self):
@@ -174,6 +179,21 @@ class TestGeonodeFetcher(object):
             json_data={}, text="1.2.3.4:8080")
         result = list(GeonodeFetcher().fetch())
         assert "1.2.3.4:8080" in result
+
+    @patch("fetcher.sources.geonode.WebRequest")
+    def test_fetch_filters_socks_proxies(self, mock_wr):
+        """只保留http/https协议, socks代理应被过滤掉"""
+        from fetcher.sources.geonode import GeonodeFetcher
+        json_data = {"data": [
+            {"ip": "1.2.3.4", "port": "8080", "protocols": ["http"]},
+            {"ip": "5.6.7.8", "port": "1080", "protocols": ["socks5"]},
+            {"ip": "9.9.9.9", "port": "3128", "protocols": ["https"]},
+        ]}
+        mock_wr.return_value.get.return_value = _make_response(json_data=json_data)
+        result = list(GeonodeFetcher().fetch())
+        assert "1.2.3.4:8080" in result
+        assert "9.9.9.9:3128" in result
+        assert "5.6.7.8:1080" not in result
 
 
 class TestKuaidailiFetcher(object):
@@ -481,3 +501,152 @@ class TestScdnTextFetcher(object):
         from fetcher.sources.scdntext import ScdnTextFetcher
         mock_wr.return_value.get.return_value = _make_response(text="")
         assert list(ScdnTextFetcher().fetch()) == []
+
+
+class TestMonosansFetcher(object):
+
+    @patch("fetcher.sources.monosans.WebRequest")
+    def test_fetch(self, mock_wr):
+        from fetcher.sources.monosans import MonosansFetcher
+        text = "1.2.3.4:8080\n5.6.7.8:3128\n"
+        mock_wr.return_value.get.return_value = _make_response(text=text)
+        result = list(MonosansFetcher().fetch())
+        assert result == ["1.2.3.4:8080", "5.6.7.8:3128"]
+
+    @patch("fetcher.sources.monosans.WebRequest")
+    def test_fetch_limit_applied(self, mock_wr):
+        from fetcher.sources.monosans import MonosansFetcher
+        text = "\n".join("10.0.%d.%d:8080" % (i // 250, i % 250 + 1) for i in range(400))
+        mock_wr.return_value.get.return_value = _make_response(text=text)
+        result = list(MonosansFetcher().fetch())
+        assert len(result) == MonosansFetcher.limit == 300
+
+    @patch("fetcher.sources.monosans.WebRequest")
+    def test_fetch_empty_returns_empty(self, mock_wr):
+        from fetcher.sources.monosans import MonosansFetcher
+        mock_wr.return_value.get.return_value = _make_response(text="")
+        assert list(MonosansFetcher().fetch()) == []
+
+
+class TestTheSpeedXFetcher(object):
+
+    @patch("fetcher.sources.thespeedx.WebRequest")
+    def test_fetch(self, mock_wr):
+        from fetcher.sources.thespeedx import TheSpeedXFetcher
+        text = "1.2.3.4:8080\n5.6.7.8:3128\n"
+        mock_wr.return_value.get.return_value = _make_response(text=text)
+        result = list(TheSpeedXFetcher().fetch())
+        assert result == ["1.2.3.4:8080", "5.6.7.8:3128"]
+
+    @patch("fetcher.sources.thespeedx.WebRequest")
+    def test_fetch_dedup(self, mock_wr):
+        from fetcher.sources.thespeedx import TheSpeedXFetcher
+        text = "1.2.3.4:8080\n1.2.3.4:8080\n5.6.7.8:3128\n"
+        mock_wr.return_value.get.return_value = _make_response(text=text)
+        result = list(TheSpeedXFetcher().fetch())
+        assert result == ["1.2.3.4:8080", "5.6.7.8:3128"]
+
+    @patch("fetcher.sources.thespeedx.WebRequest")
+    def test_fetch_limit_applied(self, mock_wr):
+        from fetcher.sources.thespeedx import TheSpeedXFetcher
+        text = "\n".join("10.0.%d.%d:8080" % (i // 250, i % 250 + 1) for i in range(500))
+        mock_wr.return_value.get.return_value = _make_response(text=text)
+        result = list(TheSpeedXFetcher().fetch())
+        assert len(result) == TheSpeedXFetcher.limit == 200
+
+
+class TestProxyScrapeFetcher(object):
+
+    @patch("fetcher.sources.proxyscrape.WebRequest")
+    def test_fetch_merges_both_protocols(self, mock_wr):
+        """http与https两个接口的结果合并去重"""
+        from fetcher.sources.proxyscrape import ProxyScrapeFetcher
+        http_resp = _make_response(text="1.2.3.4:8080\n5.6.7.8:8080\n")
+        https_resp = _make_response(text="5.6.7.8:8080\n9.9.9.9:3128\n")
+        mock_wr.return_value.get.side_effect = [http_resp, https_resp]
+
+        result = list(ProxyScrapeFetcher().fetch())
+
+        assert mock_wr.return_value.get.call_count == len(ProxyScrapeFetcher.listUrls) == 2
+        assert result == ["1.2.3.4:8080", "5.6.7.8:8080", "9.9.9.9:3128"]
+
+    @patch("fetcher.sources.proxyscrape.WebRequest")
+    def test_fetch_limit_applied(self, mock_wr):
+        from fetcher.sources.proxyscrape import ProxyScrapeFetcher
+        text = "\n".join("10.0.%d.%d:8080" % (i // 250, i % 250 + 1) for i in range(300))
+        mock_wr.return_value.get.return_value = _make_response(text=text)
+        result = list(ProxyScrapeFetcher().fetch())
+        assert len(result) == ProxyScrapeFetcher.limit == 200
+
+    @patch("fetcher.sources.proxyscrape.WebRequest")
+    def test_fetch_empty_returns_empty(self, mock_wr):
+        from fetcher.sources.proxyscrape import ProxyScrapeFetcher
+        mock_wr.return_value.get.return_value = _make_response(text="")
+        assert list(ProxyScrapeFetcher().fetch()) == []
+
+
+class TestSpysMeFetcher(object):
+
+    @patch("fetcher.sources.spysme.WebRequest")
+    def test_fetch_with_country_suffix(self, mock_wr):
+        """行格式为 ip:port 国家码-匿名度"""
+        from fetcher.sources.spysme import SpysMeFetcher
+        text = ("1.2.3.4:8080 TH-H\n"
+                "5.6.7.8:3128 US-N\n")
+        mock_wr.return_value.get.return_value = _make_response(text=text)
+        result = list(SpysMeFetcher().fetch())
+        assert result == ["1.2.3.4:8080", "5.6.7.8:3128"]
+
+    @patch("fetcher.sources.spysme.WebRequest")
+    def test_fetch_limit_applied(self, mock_wr):
+        from fetcher.sources.spysme import SpysMeFetcher
+        text = "\n".join("10.0.%d.%d:8080" % (i // 250, i % 250 + 1) for i in range(400))
+        mock_wr.return_value.get.return_value = _make_response(text=text)
+        result = list(SpysMeFetcher().fetch())
+        assert len(result) == SpysMeFetcher.limit == 200
+
+    @patch("fetcher.sources.spysme.WebRequest")
+    def test_fetch_empty_returns_empty(self, mock_wr):
+        from fetcher.sources.spysme import SpysMeFetcher
+        mock_wr.return_value.get.return_value = _make_response(text="")
+        assert list(SpysMeFetcher().fetch()) == []
+
+
+class TestFreeProxyListFetcher(object):
+
+    @patch("fetcher.sources.freeproxylist.WebRequest")
+    def test_fetch_parses_textarea_content(self, mock_wr):
+        """页面内只读文本框中的纯文本列表"""
+        from fetcher.sources.freeproxylist import FreeProxyListFetcher
+        html = ('<textarea class="form-control" readonly="readonly">'
+                'Free proxies from free-proxy-list.net\n'
+                '1.2.3.4:8080\n5.6.7.8:3128</textarea>')
+        mock_wr.return_value.get.return_value = _make_response(text=html)
+        result = list(FreeProxyListFetcher().fetch())
+        assert result == ["1.2.3.4:8080", "5.6.7.8:3128"]
+
+    @patch("fetcher.sources.freeproxylist.WebRequest")
+    def test_fetch_merges_pages_dedup(self, mock_wr):
+        from fetcher.sources.freeproxylist import FreeProxyListFetcher
+        page1 = _make_response(text="1.2.3.4:8080\n5.6.7.8:3128\n")
+        page2 = _make_response(text="5.6.7.8:3128\n9.9.9.9:8080\n")
+        mock_wr.return_value.get.side_effect = [page1, page2]
+
+        result = list(FreeProxyListFetcher().fetch())
+
+        assert mock_wr.return_value.get.call_count == len(FreeProxyListFetcher.listUrls)
+        assert result == ["1.2.3.4:8080", "5.6.7.8:3128", "9.9.9.9:8080"]
+
+    @patch("fetcher.sources.freeproxylist.WebRequest")
+    def test_fetch_limit_applied(self, mock_wr):
+        from fetcher.sources.freeproxylist import FreeProxyListFetcher
+        text = "\n".join("10.0.%d.%d:8080" % (i // 250, i % 250 + 1) for i in range(400))
+        mock_wr.return_value.get.return_value = _make_response(text=text)
+        result = list(FreeProxyListFetcher().fetch())
+        assert len(result) == FreeProxyListFetcher.limit == 200
+
+    @patch("fetcher.sources.freeproxylist.WebRequest")
+    def test_fetch_empty_returns_empty(self, mock_wr):
+        from fetcher.sources.freeproxylist import FreeProxyListFetcher
+        mock_wr.return_value.get.return_value = _make_response(text="")
+        assert list(FreeProxyListFetcher().fetch()) == []

@@ -77,11 +77,13 @@ class TestDoValidator:
     @patch("helper.check.ConfigHandler")
     @patch("helper.check.ProxyValidator")
     def test_validator_http_fail(self, mock_pv_cls, mock_conf_cls, mock_anon):
-        """HTTP 失败 -> fail_count += 1, last_status=False, 不检测匿名度"""
+        """HTTP 失败且关闭https兜底 -> fail_count += 1, last_status=False, 不检测匿名度"""
         mock_pv_cls.http_validator = [MagicMock(return_value=False)]
+        mock_pv_cls.https_validator = [MagicMock(return_value=False)]
 
         mock_conf = MagicMock()
         mock_conf.proxyRegion = False
+        mock_conf.verifyHttpsFallback = False
 
         proxy = Proxy("1.2.3.4:8080", source="test")
         proxy.fail_count = 0
@@ -92,6 +94,72 @@ class TestDoValidator:
         assert result.last_status is False
         assert result.fail_count == 1
         mock_anon.assert_not_called()
+
+    @patch("helper.check.DoValidator.anonymousValidator", return_value=2)
+    @patch("helper.check.ConfigHandler")
+    @patch("helper.check.ProxyValidator")
+    def test_validator_http_fail_https_fallback_pass(self, mock_pv_cls, mock_conf_cls, mock_anon):
+        """HTTP 失败但 HTTPS 兜底通过 -> 只支持https转发的代理也算可用"""
+        mock_pv_cls.http_validator = [MagicMock(return_value=False)]
+        mock_pv_cls.https_validator = [MagicMock(return_value=True)]
+
+        mock_conf = MagicMock()
+        mock_conf.proxyRegion = False
+        mock_conf.verifyHttpsFallback = True
+
+        proxy = Proxy("1.2.3.4:8080", source="test")
+        proxy.fail_count = 0
+
+        with patch.object(DoValidator, "conf", mock_conf):
+            result = DoValidator.validator(proxy, "use")
+
+        assert result.last_status is True
+        assert result.https is True
+        assert result.fail_count == 0
+        mock_anon.assert_called_once_with("1.2.3.4:8080", True)
+
+    @patch("helper.check.DoValidator.anonymousValidator")
+    @patch("helper.check.ConfigHandler")
+    @patch("helper.check.ProxyValidator")
+    def test_validator_http_fail_https_fallback_fail(self, mock_pv_cls, mock_conf_cls, mock_anon):
+        """HTTP 与 HTTPS 兜底都失败 -> 不可用"""
+        mock_pv_cls.http_validator = [MagicMock(return_value=False)]
+        mock_pv_cls.https_validator = [MagicMock(return_value=False)]
+
+        mock_conf = MagicMock()
+        mock_conf.proxyRegion = False
+        mock_conf.verifyHttpsFallback = True
+
+        proxy = Proxy("1.2.3.4:8080", source="test")
+        proxy.fail_count = 0
+
+        with patch.object(DoValidator, "conf", mock_conf):
+            result = DoValidator.validator(proxy, "use")
+
+        assert result.last_status is False
+        assert result.fail_count == 1
+        mock_anon.assert_not_called()
+
+    @patch("helper.check.DoValidator.anonymousValidator")
+    @patch("helper.check.ConfigHandler")
+    @patch("helper.check.ProxyValidator")
+    def test_validator_skips_https_probe_when_fallback_disabled(self, mock_pv_cls, mock_conf_cls, mock_anon):
+        """关闭兜底开关时, HTTP 失败不再探测 HTTPS"""
+        mock_pv_cls.http_validator = [MagicMock(return_value=False)]
+        https_func = MagicMock(return_value=True)
+        mock_pv_cls.https_validator = [https_func]
+
+        mock_conf = MagicMock()
+        mock_conf.proxyRegion = False
+        mock_conf.verifyHttpsFallback = False
+
+        proxy = Proxy("1.2.3.4:8080", source="test")
+
+        with patch.object(DoValidator, "conf", mock_conf):
+            result = DoValidator.validator(proxy, "use")
+
+        assert result.last_status is False
+        https_func.assert_not_called()
 
     @patch("helper.check.DoValidator.anonymousValidator", return_value=2)
     @patch("helper.check.ConfigHandler")

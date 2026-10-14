@@ -8,11 +8,12 @@
 4. 优化CI配置, 避免PR时重复触发测试; (2026-05-26)
 5. 迁移文档从 Sphinx/ReadTheDocs 到 MkDocs Material/GitHub Pages; (2026-05-27)
 6. **重写测试套件**: 使用pytest重构全部测试, 覆盖unit/api/integration三层; (2026-05-28)
-7. **重构代理采集模块**: 将 `proxyFetcher.py` 拆分为独立文件 + `BaseFetcher` 基类插件架构，支持自动扫描和运行时热更新; (2026-05-31)
-   - 每个代理源独立文件（`fetcher/sources/`），继承 `BaseFetcher` 基类
-   - 自动扫描启用的代理源，无需在配置中列举
-   - 新增 `PROXY_FETCHER_EXCLUDE` 黑名单配置
-   - 新增 `proxyPool.py fetcher` 命令查看启用的代理源
+7. **重构代理采集模块**: 将 `proxyFetcher.py` 拆分为独立文件 + `BaseFetcher` 基类插件架构，支持自动扫描和运行时热更新;
+   (2026-05-31)
+    - 每个代理源独立文件（`fetcher/sources/`），继承 `BaseFetcher` 基类
+    - 自动扫描启用的代理源，无需在配置中列举
+    - 新增 `PROXY_FETCHER_EXCLUDE` 黑名单配置
+    - 新增 `proxyPool.py fetcher` 命令查看启用的代理源
 8. 新增代理源 **Proxifly**; (2026-06-01)
 9. 移除失效代理源 **FreeProxyList**; (2026-06-02)
 10. 新增代理源 **66代理 (daili66)**; (2026-06-08)
@@ -22,8 +23,14 @@
 14. **合并 PR #694**: `/get` 接口支持 `region`（中文地区）与 `anonymous`（匿名度）筛选，新增代理匿名度检测; (2026-10-12)
 15. 代理可用性校验目标改为 `http://httpbin.org/uuid` 与 `http://geo.brdtest.com/welcome.txt` 随机二选一; (2026-10-12)
 16. 新增代理源 **OpenProxyList** (`openproxylist.py`) 与 **SCDN Text** (`scdntext.py`, 单轮随机采样300条); (2026-10-12)
-
-
+17. 采集/复检定时任务间隔改为配置项，采集间隔默认由 5 分钟延长至 30 分钟（`FETCH_INTERVAL_MINUTES` /
+    `CHECK_INTERVAL_MINUTES`）; (2026-10-14)
+18. 可用性校验放宽: HTTP 转发或 HTTPS 任一通过即视为可用，新增 `VERIFY_HTTPS_FALLBACK` 兜底开关; (2026-10-14)
+19. `BaseFetcher` 新增 `limit` 属性与 `limitProxies()` 随机采样方法，限制超大源单轮入队量; (2026-10-14)
+20. 新增代理源 **Monosans**、 **TheSpeedX**、 **ProxyScrape**、 **Spys.me**、 **Free-Proxy-List**; (2026-10-14)
+21. 修复 **Geonode** 源（移除已失效的 `filterLastChecked` 参数）并过滤其中的 socks 代理; (2026-10-14)
+22. 将实测失效的 **66代理**、 **FreeVPNNode**、 **开心代理**、 **Docip**、 **站大爷** 加入采集黑名单; (2026-10-14)
+23. 新增《代理源调研记录》文档，沉淀各源实测状态、失效原因与避坑清单; (2026-10-14)
 
 ## 2.4.2 (2024-01-18)
 
@@ -72,7 +79,8 @@
 ## 2.1.0 (2020-07)
 
 1. 新增免费代理源 **西拉代理**; (2020-03-30)
-2. Fix Bug [#356](https://github.com/jhao104/proxy_pool/issues/356) [#401](https://github.com/jhao104/proxy_pool/issues/401)
+2. Fix
+   Bug [#356](https://github.com/jhao104/proxy_pool/issues/356) [#401](https://github.com/jhao104/proxy_pool/issues/401)
 3. 优化Docker镜像体积; (2020-06-19)
 4. 优化配置方式;
 5. 优化代码结构;
@@ -106,7 +114,8 @@
 
 1. 优化代理格式检查;
 2. 增加代理源;
-3. Fix Bug [#122](https://github.com/jhao104/proxy_pool/issues/122) [#126](https://github.com/jhao104/proxy_pool/issues/126)
+3. Fix
+   Bug [#122](https://github.com/jhao104/proxy_pool/issues/122) [#126](https://github.com/jhao104/proxy_pool/issues/126)
 
 ## 1.11 (2017-08)
 

@@ -9,6 +9,7 @@
    Change Activity:
                    2019/08/05: proxyScheduler
                    2021/02/23: runProxyCheck时,剩余代理少于POOL_SIZE_MIN时执行抓取
+                    2026/10/14: 采集/检查间隔改为配置项, 采集间隔默认由5分钟延长至30分钟
 -------------------------------------------------
 """
 __author__ = 'JHao'
@@ -47,12 +48,20 @@ def __runProxyCheck():
 def runScheduler():
     __runProxyFetch()
 
-    timezone = ConfigHandler().timezone
+    conf = ConfigHandler()
+    timezone = conf.timezone
     scheduler_log = LogHandler("scheduler")
     scheduler = BlockingScheduler(logger=scheduler_log, timezone=timezone)
 
-    scheduler.add_job(__runProxyFetch, 'interval', minutes=5, id="proxy_fetch", name="proxy采集")
-    scheduler.add_job(__runProxyCheck, 'interval', minutes=2, id="proxy_check", name="proxy检查")
+    fetch_interval = conf.fetchIntervalMinutes
+    check_interval = conf.checkIntervalMinutes
+    scheduler_log.info("Scheduler : fetch every %s min, check every %s min" % (
+        fetch_interval, check_interval))
+
+    scheduler.add_job(__runProxyFetch, 'interval', minutes=fetch_interval,
+                      id="proxy_fetch", name="proxy采集")
+    scheduler.add_job(__runProxyCheck, 'interval', minutes=check_interval,
+                      id="proxy_check", name="proxy检查")
     executors = {
         'default': {'type': 'threadpool', 'max_workers': 20},
         'processpool': ProcessPoolExecutor(max_workers=5)

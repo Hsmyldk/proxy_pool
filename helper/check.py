@@ -11,6 +11,7 @@
                    2021/05/25: 分别校验http和https
                    2022/08/16: 获取代理Region信息
                    2026/10/12: 合并PR#694 region/anonymous筛选
+                    2026/10/14: 校验放宽为http或https任一通过即视为可用
 -------------------------------------------------
 """
 __author__ = 'JHao'
@@ -43,12 +44,14 @@ class DoValidator(object):
             Proxy Object
         """
         http_r = cls.httpValidator(proxy)
-        https_r = False if not http_r else cls.httpsValidator(proxy)
+        # 代理只要求支持http或https其一: http不通时按需再用https兜底探测
+        https_r = cls.httpsValidator(proxy) if (http_r or cls.conf.verifyHttpsFallback) else False
+        usable = http_r or https_r
 
         proxy.check_count += 1
         proxy.last_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        proxy.last_status = True if http_r else False
-        if http_r:
+        proxy.last_status = True if usable else False
+        if usable:
             if proxy.fail_count > 0:
                 proxy.fail_count -= 1
             proxy.https = True if https_r else False

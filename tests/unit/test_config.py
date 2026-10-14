@@ -24,8 +24,9 @@ def clean_env():
     """测试前后清理可能设置的环境变量"""
     env_keys = ["DB_CONN", "PORT", "HOST", "TABLE_NAME", "VERIFY_UUID_URL",
                 "VERIFY_TEXT_URL", "VERIFY_TEXT_KEYWORD", "HTTPS_URL",
-                "VERIFY_TIMEOUT", "MAX_FAIL_COUNT",
-                "POOL_SIZE_MIN", "PROXY_REGION", "TIMEZONE"]
+                "VERIFY_TIMEOUT", "MAX_FAIL_COUNT", "VERIFY_HTTPS_FALLBACK",
+                "POOL_SIZE_MIN", "PROXY_REGION", "TIMEZONE",
+                "FETCH_INTERVAL_MINUTES", "CHECK_INTERVAL_MINUTES"]
     saved = {k: os.environ.get(k) for k in env_keys}
     for k in env_keys:
         os.environ.pop(k, None)
@@ -80,6 +81,15 @@ class TestConfigHandlerDefaults:
     def test_timezone_default(self, conf):
         assert conf.timezone == setting.TIMEZONE
 
+    def test_verify_https_fallback_default(self, conf):
+        assert conf.verifyHttpsFallback == setting.VERIFY_HTTPS_FALLBACK
+
+    def test_fetch_interval_default(self, conf):
+        assert conf.fetchIntervalMinutes == setting.FETCH_INTERVAL_MINUTES
+
+    def test_check_interval_default(self, conf):
+        assert conf.checkIntervalMinutes == setting.CHECK_INTERVAL_MINUTES
+
     def test_fetcher_exclude_is_list(self, conf):
         assert isinstance(conf.fetcherExclude, list)
 
@@ -115,3 +125,28 @@ class TestConfigHandlerEnvOverride:
         os.environ["MAX_FAIL_COUNT"] = "5"
         conf = ConfigHandler()
         assert conf.maxFailCount == 5
+
+    def test_fetch_interval_override(self):
+        os.environ["FETCH_INTERVAL_MINUTES"] = "60"
+        conf = ConfigHandler()
+        assert conf.fetchIntervalMinutes == 60
+
+    def test_check_interval_override(self):
+        os.environ["CHECK_INTERVAL_MINUTES"] = "15"
+        conf = ConfigHandler()
+        assert conf.checkIntervalMinutes == 15
+
+    def test_verify_https_fallback_override_false(self):
+        os.environ["VERIFY_HTTPS_FALLBACK"] = "False"
+        conf = ConfigHandler()
+        assert conf.verifyHttpsFallback is False
+
+    def test_verify_https_fallback_override_zero(self):
+        os.environ["VERIFY_HTTPS_FALLBACK"] = "0"
+        conf = ConfigHandler()
+        assert conf.verifyHttpsFallback is False
+
+    def test_verify_https_fallback_override_true(self):
+        os.environ["VERIFY_HTTPS_FALLBACK"] = "true"
+        conf = ConfigHandler()
+        assert conf.verifyHttpsFallback is True

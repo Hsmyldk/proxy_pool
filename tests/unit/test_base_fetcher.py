@@ -8,6 +8,7 @@
 -------------------------------------------------
    Change Activity:
                    2026/05/31:
+                    2026/10/14: 补充limitProxies采样测试
 -------------------------------------------------
 """
 __author__ = 'JHao'
@@ -86,12 +87,52 @@ class TestYieldUniqueProxies(object):
         assert isinstance(gen, types.GeneratorType)
 
 
+class TestLimitProxies(object):
+    """limitProxies 采样测试"""
+
+    @staticmethod
+    def _fetcher(limit):
+        class _Fetcher(BaseFetcher):
+            pass
+        fetcher = _Fetcher()
+        fetcher.limit = limit
+        return fetcher
+
+    def test_limit_zero_keeps_all(self):
+        proxies = ["1.2.3.4:%d" % (1000 + i) for i in range(10)]
+        assert self._fetcher(0).limitProxies(proxies) == proxies
+
+    def test_limit_smaller_than_input_samples(self):
+        proxies = ["1.2.3.4:%d" % (1000 + i) for i in range(50)]
+        result = self._fetcher(3).limitProxies(proxies)
+        assert len(result) == 3
+        assert set(result).issubset(set(proxies))
+
+    def test_limit_larger_than_input_keeps_all(self):
+        proxies = ["1.2.3.4:%d" % (1000 + i) for i in range(5)]
+        assert self._fetcher(100).limitProxies(proxies) == proxies
+
+    def test_empty_list(self):
+        assert self._fetcher(10).limitProxies([]) == []
+
+    def test_default_limit_keeps_all(self):
+        """子类未声明 limit 时走基类默认值0, 不采样"""
+        class _Fetcher(BaseFetcher):
+            pass
+        proxies = ["1.2.3.4:%d" % (1000 + i) for i in range(20)]
+        assert _Fetcher().limitProxies(proxies) == proxies
+
+
 class TestBaseFetcherInterface(object):
     """BaseFetcher 接口约定测试"""
 
     def test_name_attribute(self):
         assert hasattr(BaseFetcher, 'name')
         assert BaseFetcher.name == ""
+
+    def test_limit_attribute_default_zero(self):
+        assert hasattr(BaseFetcher, 'limit')
+        assert BaseFetcher.limit == 0
 
     def test_url_attribute(self):
         assert hasattr(BaseFetcher, 'url')

@@ -18,9 +18,9 @@ from util.webRequest import WebRequest
 class MySourceFetcher(BaseFetcher):
     """我的代理源 https://example.com/proxy"""
 
-    name = "mysource"                   # 唯一标识，用于日志
-    url = "https://example.com/proxy"   # 源网站首页
-    enabled = True                      # 设为 False 可禁用
+    name = "mysource"  # 唯一标识，用于日志
+    url = "https://example.com/proxy"  # 源网站首页
+    enabled = True  # 设为 False 可禁用
 
     def fetch(self):
         """yield "host:port" 格式的代理字符串"""
@@ -34,7 +34,7 @@ if __name__ == '__main__':
         print(proxy)
 ```
 
-添加完成后，调度器下一轮采集（默认 5 分钟）会自动发现并启用新源，**无需修改任何配置文件**。
+添加完成后，调度器下一轮采集（默认 30 分钟）会自动发现并启用新源， **无需修改任何配置文件**。
 
 ### 第二步：验证
 
@@ -77,29 +77,57 @@ PROXY_FETCHER_EXCLUDE = ["MySourceFetcher"]
 
 ### 必须声明的属性
 
-| 属性 | 类型 | 说明 |
-|------|------|------|
-| `name` | str | 唯一标识，用于日志和代理来源标记 |
-| `url` | str | 源网站首页 URL |
+| 属性   | 类型 | 说明                             |
+|--------|------|----------------------------------|
+| `name` | str  | 唯一标识，用于日志和代理来源标记 |
+| `url`  | str  | 源网站首页 URL                   |
 
 ### 可选属性
 
-| 属性 | 类型 | 默认值 | 说明 |
-|------|------|--------|------|
-| `enabled` | bool | `True` | 是否启用 |
+| 属性      | 类型 | 默认值 | 说明                                             |
+|-----------|------|--------|--------------------------------------------------|
+| `enabled` | bool | `True` | 是否启用                                         |
+| `limit`   | int  | `0`    | 单轮最多产出条数，超出时随机采样；`0` 表示不限制 |
 
 ### 必须实现的方法
 
-| 方法 | 说明 |
-|------|------|
+| 方法          | 说明                                   |
+|---------------|----------------------------------------|
 | `fetch(self)` | 生成器，yield `"host:port"` 格式字符串 |
 
 ### 共享解析工具
 
-| 方法 | 说明 |
-|------|------|
-| `parseProxiesFromText(text)` | 从纯文本中用正则提取 ip:port |
-| `yieldUniqueProxies(proxies)` | 去重 yield |
+| 方法                          | 说明                                |
+|-------------------------------|-------------------------------------|
+| `parseProxiesFromText(text)`  | 从纯文本中用正则提取 ip:port        |
+| `yieldUniqueProxies(proxies)` | 去重 yield                          |
+| `limitProxies(proxies)`       | 按 `limit` 随机采样，限制单轮入队量 |
+
+### 限制单轮入队量
+
+免费源里有些列表动辄数万条（如 `MuRongPIG/Proxy-Master` 超过 10 万条），且免费代理可用率通常只有个位数。全量入队会让单轮校验耗时数小时，因此
+**量大的源务必设置 `limit`**：
+
+```python
+class BigSourceFetcher(BaseFetcher):
+    name = "bigsource"
+    url = "https://example.com"
+    limit = 200  # 单轮最多随机取 200 条去校验
+
+    def fetch(self):
+        r = WebRequest().get(self.url, timeout=15)
+        # limitProxies 会在超出 limit 时随机采样
+        proxies = self.limitProxies(self.parseProxiesFromText(r.text))
+        for proxy in self.yieldUniqueProxies(proxies):
+            yield proxy
+```
+
+未入选的代理在后续轮次仍有概率被采到，长期可覆盖全量，而每轮只把少量代理丢给校验线程，保证 **入池的都是校验通过的代理**。
+
+### 关于协议
+
+项目只支持 **HTTP/HTTPS** 代理，不支持 SOCKS。如果源返回的数据中混有 SOCKS 代理，需要在 `fetch()` 中按协议过滤掉（参考
+`geonode.py` 按 `protocols` 字段过滤的写法）。
 
 ## 运行时热更新
 
@@ -111,8 +139,8 @@ PROXY_FETCHER_EXCLUDE = ["MySourceFetcher"]
 
 ## 命名规范
 
-| 元素 | 风格 | 示例 |
-|------|------|------|
-| 文件名 | 小写 | `mysource.py` |
-| 类名 | PascalCase | `MySourceFetcher` |
-| `name` 属性 | 小写 | `"mysource"` |
+| 元素        | 风格       | 示例              |
+|-------------|------------|-------------------|
+| 文件名      | 小写       | `mysource.py`     |
+| 类名        | PascalCase | `MySourceFetcher` |
+| `name` 属性 | 小写       | `"mysource"`      |

@@ -108,10 +108,12 @@ class TestRunScheduler:
     @patch("helper.scheduler.__runProxyFetch")
     @patch("helper.scheduler.ConfigHandler")
     @patch("helper.scheduler.LogHandler")
-    def test_fetch_job_interval_5min(self, mock_log, mock_conf_cls, mock_fetch, mock_sched_cls):
-        """采集任务间隔 5 分钟"""
+    def test_fetch_job_interval_from_config(self, mock_log, mock_conf_cls, mock_fetch, mock_sched_cls):
+        """采集任务间隔取自配置(默认30分钟)"""
         mock_conf = MagicMock()
         mock_conf.timezone = "Asia/Shanghai"
+        mock_conf.fetchIntervalMinutes = 30
+        mock_conf.checkIntervalMinutes = 2
         mock_conf_cls.return_value = mock_conf
         mock_sched = MagicMock()
         mock_sched_cls.return_value = mock_sched
@@ -121,16 +123,19 @@ class TestRunScheduler:
         calls = mock_sched.add_job.call_args_list
         first_call = calls[0]
         assert first_call[0][1] == "interval"
-        assert first_call[1]["minutes"] == 5
+        assert first_call[1]["minutes"] == 30
+        assert first_call[1]["id"] == "proxy_fetch"
 
     @patch("helper.scheduler.BlockingScheduler")
     @patch("helper.scheduler.__runProxyFetch")
     @patch("helper.scheduler.ConfigHandler")
     @patch("helper.scheduler.LogHandler")
-    def test_check_job_interval_2min(self, mock_log, mock_conf_cls, mock_fetch, mock_sched_cls):
-        """检查任务间隔 2 分钟"""
+    def test_check_job_interval_from_config(self, mock_log, mock_conf_cls, mock_fetch, mock_sched_cls):
+        """检查任务间隔取自配置(默认2分钟)"""
         mock_conf = MagicMock()
         mock_conf.timezone = "Asia/Shanghai"
+        mock_conf.fetchIntervalMinutes = 30
+        mock_conf.checkIntervalMinutes = 2
         mock_conf_cls.return_value = mock_conf
         mock_sched = MagicMock()
         mock_sched_cls.return_value = mock_sched
@@ -141,3 +146,24 @@ class TestRunScheduler:
         second_call = calls[1]
         assert second_call[0][1] == "interval"
         assert second_call[1]["minutes"] == 2
+        assert second_call[1]["id"] == "proxy_check"
+
+    @patch("helper.scheduler.BlockingScheduler")
+    @patch("helper.scheduler.__runProxyFetch")
+    @patch("helper.scheduler.ConfigHandler")
+    @patch("helper.scheduler.LogHandler")
+    def test_intervals_follow_custom_config(self, mock_log, mock_conf_cls, mock_fetch, mock_sched_cls):
+        """自定义间隔生效"""
+        mock_conf = MagicMock()
+        mock_conf.timezone = "Asia/Shanghai"
+        mock_conf.fetchIntervalMinutes = 45
+        mock_conf.checkIntervalMinutes = 7
+        mock_conf_cls.return_value = mock_conf
+        mock_sched = MagicMock()
+        mock_sched_cls.return_value = mock_sched
+
+        scheduler_mod.runScheduler()
+
+        calls = mock_sched.add_job.call_args_list
+        assert calls[0][1]["minutes"] == 45
+        assert calls[1][1]["minutes"] == 7

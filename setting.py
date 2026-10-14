@@ -10,6 +10,8 @@
                    2019/2/15:
                     2026/10/12: 代理可用性校验配置改为随机二选一
                     2026/10/12: 校验目标改为http, 兼容仅支持HTTP转发的代理
+                    2026/10/14: 采集/检查间隔可配置, 采集间隔延长至30分钟
+                    2026/10/14: 新增https兜底校验开关, 失效源加入黑名单
 -------------------------------------------------
 """
 
@@ -49,7 +51,20 @@ TABLE_NAME = 'use_proxy'
 # ###### config the proxy fetch function ######
 # 自动扫描 fetcher/sources/ 目录，加载所有 enabled=True 的 fetcher
 # 如需临时禁用某个 fetcher，在下方黑名单中添加类名（不改源文件）
-PROXY_FETCHER_EXCLUDE = []
+# 以下源在 2026/10/14 实测为零产出或异常(详见 docs/proxy-sources-survey.md):
+#   DaiLi66Fetcher     - api.66daili.com 返回 502
+#   FreeVPNNodeFetcher - cn.freevpnnode.com 返回 526
+#   KxdailiFetcher     - 页面改版, 无明文 IP
+#   DocipFetcher       - /data/free.json 连接被重置
+#   ZdayeFetcher       - 页面结构变化, fetch 抛 IndexError
+# 某个源恢复后, 从列表移除对应类名即可重新启用
+PROXY_FETCHER_EXCLUDE = [
+    "DaiLi66Fetcher",
+    "FreeVPNNodeFetcher",
+    "KxdailiFetcher",
+    "DocipFetcher",
+    "ZdayeFetcher",
+]
 
 # ############# proxy validator #################
 # 代理可用性校验: 以下两种方式每次校验随机选一种执行
@@ -63,6 +78,11 @@ VERIFY_TEXT_KEYWORD = "Welcome to Bright Data"
 
 # 代理https支持检测目标网站
 HTTPS_URL = "https://www.qq.com"
+
+# http转发校验失败时, 是否再用https探测一次
+# 部分免费代理仅支持https转发, 开启后这类代理也可入池(校验只用http或https任一通过即可)
+# 代价: http不通的代理都会多探一次, 单轮校验耗时增加, 可通过调小VERIFY_TIMEOUT缓解
+VERIFY_HTTPS_FALLBACK = True
 
 # 代理验证时超时时间
 VERIFY_TIMEOUT = 10
@@ -81,6 +101,13 @@ POOL_SIZE_MIN = 20
 PROXY_REGION = True
 
 # ############# scheduler config #################
+
+# 代理采集间隔(分钟)
+# 免费源更新较慢, 间隔过短多数轮次抓不到新代理, 只是白白消耗请求
+FETCH_INTERVAL_MINUTES = 30
+
+# 代理可用性复检间隔(分钟)
+CHECK_INTERVAL_MINUTES = 2
 
 # Set the timezone for the scheduler forcely (optional)
 # If it is running on a VM, and

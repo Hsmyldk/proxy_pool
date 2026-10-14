@@ -7,7 +7,7 @@
 | 接口 | 方法 | 说明 | 参数 |
 |------|------|------|------|
 | `/` | GET | 返回 API 列表 | 无 |
-| `/get` | GET | 随机返回一个代理 | 可选：`?type=https` 过滤 HTTPS 代理 |
+| `/get` | GET | 随机返回一个代理 | 可选：`?type=https` 过滤 HTTPS 代理；`?region=广东` 按地区（中文子串）过滤；`?anonymous=2` 按匿名度过滤（0-透明 / 1-匿名 / 2-高匿） |
 | `/pop` | GET | 返回并删除一个代理 | 可选：`?type=https` 过滤 HTTPS 代理 |
 | `/all` | GET | 返回所有代理 | 可选：`?type=https` 过滤 HTTPS 代理 |
 | `/count` | GET | 返回代理数量统计 | 无 |

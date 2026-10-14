@@ -63,13 +63,27 @@ class TestGet:
         assert resp.status_code == 200
         data = resp.get_json()
         assert data["https"] is True
-        mocks["get"].assert_called_with(True)
+        mocks["get"].assert_called_with(True, '', -1)
 
     def test_get_http_filter(self, client, mocks):
         mocks["get"].return_value = None
 
         client.get("/get/")
-        mocks["get"].assert_called_with(False)
+        mocks["get"].assert_called_with(False, '', -1)
+
+    def test_get_region_and_anonymous_forwarded(self, client, mocks):
+        """region/anonymous 参数转发给 ProxyHandler"""
+        mocks["get"].return_value = None
+
+        client.get("/get/", query_string={"region": "广东", "anonymous": "2"})
+        mocks["get"].assert_called_with(False, '广东', 2)
+
+    def test_get_anonymous_invalid_defaults_to_all(self, client, mocks):
+        """anonymous 非法值 -> -1(不筛选)"""
+        mocks["get"].return_value = None
+
+        client.get("/get/", query_string={"anonymous": "abc"})
+        mocks["get"].assert_called_with(False, '', -1)
 
 
 class TestPop:

@@ -70,6 +70,8 @@ class TestFetcherInterface(object):
         ("fetcher.sources.proxifly", "ProxiFlyFetcher"),
         ("fetcher.sources.daili66", "DaiLi66Fetcher"),
         ("fetcher.sources.roundproxies", "RoundProxiesFetcher"),
+        ("fetcher.sources.openproxylist", "OpenProxyListFetcher"),
+        ("fetcher.sources.scdntext", "ScdnTextFetcher"),
     ]
 
     def test_all_fetchers_have_name_url_enabled(self):
@@ -414,3 +416,68 @@ class TestRoundProxiesFetcher(object):
         mock_wr.return_value.get.return_value = _make_response(json_data=None)
         result = list(RoundProxiesFetcher().fetch())
         assert result == []
+
+
+class TestOpenProxyListFetcher(object):
+
+    @patch("fetcher.sources.openproxylist.WebRequest")
+    def test_fetch(self, mock_wr):
+        from fetcher.sources.openproxylist import OpenProxyListFetcher
+        text = ("HTTP(S) Proxy list updated at 2026-10-12 14:00:03 GMT+7\n"
+                "Website=https://openproxylist.com\n"
+                "183.88.219.206:41564 374ms TH [Triple T Internet Company Limited]\n"
+                "104.128.228.69:8118 139ms US [HostUS Solutions LLC]\n")
+        mock_wr.return_value.get.return_value = _make_response(text=text)
+        result = list(OpenProxyListFetcher().fetch())
+        assert "183.88.219.206:41564" in result
+        assert "104.128.228.69:8118" in result
+
+    @patch("fetcher.sources.openproxylist.WebRequest")
+    def test_fetch_dedup(self, mock_wr):
+        from fetcher.sources.openproxylist import OpenProxyListFetcher
+        text = "1.2.3.4:8080\n1.2.3.4:8080\n5.6.7.8:3128\n"
+        mock_wr.return_value.get.return_value = _make_response(text=text)
+        result = list(OpenProxyListFetcher().fetch())
+        assert result == ["1.2.3.4:8080", "5.6.7.8:3128"]
+
+    @patch("fetcher.sources.openproxylist.WebRequest")
+    def test_fetch_empty_returns_empty(self, mock_wr):
+        from fetcher.sources.openproxylist import OpenProxyListFetcher
+        mock_wr.return_value.get.return_value = _make_response(text="")
+        assert list(OpenProxyListFetcher().fetch()) == []
+
+
+class TestScdnTextFetcher(object):
+
+    @patch("fetcher.sources.scdntext.WebRequest")
+    def test_fetch(self, mock_wr):
+        from fetcher.sources.scdntext import ScdnTextFetcher
+        text = "210.61.216.63:60808\n154.64.211.145:999\n"
+        mock_wr.return_value.get.return_value = _make_response(text=text)
+        result = list(ScdnTextFetcher().fetch())
+        assert result == ["210.61.216.63:60808", "154.64.211.145:999"]
+
+    @patch("fetcher.sources.scdntext.WebRequest")
+    def test_fetch_limit_applied(self, mock_wr):
+        """条数超过limit时随机采样到limit条"""
+        from fetcher.sources.scdntext import ScdnTextFetcher
+        text = "\n".join("10.0.%d.%d:8080" % (i // 250, i % 250 + 1) for i in range(400))
+        mock_wr.return_value.get.return_value = _make_response(text=text)
+        result = list(ScdnTextFetcher().fetch())
+        assert len(result) == ScdnTextFetcher.limit == 300
+
+    @patch("fetcher.sources.scdntext.WebRequest")
+    def test_fetch_limit_zero_keeps_all(self, mock_wr):
+        """limit=0 -> 不限制条数"""
+        from fetcher.sources.scdntext import ScdnTextFetcher
+        text = "\n".join("10.0.%d.%d:8080" % (i // 250, i % 250 + 1) for i in range(400))
+        mock_wr.return_value.get.return_value = _make_response(text=text)
+        with patch.object(ScdnTextFetcher, "limit", 0):
+            result = list(ScdnTextFetcher().fetch())
+        assert len(result) == 400
+
+    @patch("fetcher.sources.scdntext.WebRequest")
+    def test_fetch_empty_returns_empty(self, mock_wr):
+        from fetcher.sources.scdntext import ScdnTextFetcher
+        mock_wr.return_value.get.return_value = _make_response(text="")
+        assert list(ScdnTextFetcher().fetch()) == []

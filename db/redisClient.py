@@ -10,6 +10,7 @@
                    2019/08/09: 封装Redis相关操作
                    2020/06/23: 优化pop方法, 改用hscan命令
                    2021/05/26: 区别http/https代理
+                    2026/10/12: 合并PR#694 region/anonymous筛选
 ------------------------------------------------------
 """
 __author__ = 'JHao'
@@ -48,19 +49,28 @@ class RedisClient(object):
                                                                    protocol=2,
                                                                    **kwargs))
 
-    def get(self, https):
+    def get(self, https, region='', anonymous=-1):
         """
         返回一个代理
+        :param https: 是否要求支持https
+        :param region: 代理地区关键字(子串匹配), 空串不筛选
+        :param anonymous: 匿名度 0-透明/1-匿名/2-高匿, -1 不筛选
         :return:
         """
-        if https:
-            items = self.__conn.hvals(self.name)
-            proxies = list(filter(lambda x: json.loads(x).get("https"), items))
-            return choice(proxies) if proxies else None
-        else:
+        if not https and region == '' and anonymous == -1:
+            # 无筛选条件: 直接随机取一个key, 避免hvals拉取整个hash
             proxies = self.__conn.hkeys(self.name)
             proxy = choice(proxies) if proxies else None
             return self.__conn.hget(self.name, proxy) if proxy else None
+
+        proxies = list(self.__conn.hvals(self.name))
+        if https:
+            proxies = list(filter(lambda x: json.loads(x).get("https"), proxies))
+        if region != '':
+            proxies = list(filter(lambda x: region in (json.loads(x).get("region") or ""), proxies))
+        if anonymous != -1:
+            proxies = list(filter(lambda x: json.loads(x).get("anonymous") == anonymous, proxies))
+        return choice(proxies) if proxies else None
 
     def put(self, proxy_obj):
         """

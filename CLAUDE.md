@@ -56,9 +56,9 @@ tests/
 - **爬取器** (`fetcher/`)：插件架构。`baseFetcher.py` 定义 `BaseFetcher` 基类（提供 `parseProxiesFromText`/`yieldUniqueProxies` 共享方法，约定 `name`/`url`/`enabled` 属性和 `fetch()` 方法）。每个代理源在 `sources/` 目录下独立文件，继承 `BaseFetcher`。调度器自动扫描目录加载 `enabled=True` 的源。`setting.py` 的 `PROXY_FETCHER_EXCLUDE` 黑名单可临时禁用指定源。
 - **数据库层** (`db/`)：抽象 `dbClient` 接口，包含 Redis (`redisClient.py`) 和 SSDB (`ssdbClient.py`) 两种实现。通过 `setting.py` 中的 `DB_CONN` 配置连接（格式：`redis://:pwd@ip:port/db` 或 `ssdb://:pwd@ip:port`）。
 - **调度器** (`helper/scheduler.py`)：基于 APScheduler 的定时任务，驱动爬取器运行并触发验证。时区通过 `setting.py` 中的 `TIMEZONE` 配置。
-- **验证器** (`helper/validator.py`)：可用性校验每次从两种方式中随机选一种：方式1 `VERIFY_UUID_URL` (http://httpbin.org/uuid) 要求响应 JSON 含 `uuid`；方式2 `VERIFY_TEXT_URL` (http://geo.brdtest.com/welcome.txt?product=dc&method=native) 要求响应文本含 `VERIFY_TEXT_KEYWORD`（默认 "Welcome to Bright Data"）。两个目标均为 http，不要求代理支持 HTTPS CONNECT。`HTTPS_URL` (https://www.qq.com) 单独探测代理是否支持 HTTPS，决定 `https` 属性。超时时间由 `VERIFY_TIMEOUT` 指定（默认 10 秒）。超过 `MAX_FAIL_COUNT` 的代理会被移除。当代理池数量低于 `POOL_SIZE_MIN`（默认 20）时触发重新爬取。
+- **验证器** (`helper/validator.py`)：可用性校验每次从两种方式中随机选一种：方式1 `VERIFY_UUID_URL` (http://httpbin.org/uuid) 要求响应 JSON 含 `uuid`；方式2 `VERIFY_TEXT_URL` (http://geo.brdtest.com/welcome.txt?product=dc&method=native) 要求响应文本含 `VERIFY_TEXT_KEYWORD`（默认 "Welcome to Bright Data"）。两个目标均为 http，不要求代理支持 HTTPS CONNECT。`HTTPS_URL` (https://www.qq.com) 单独探测代理是否支持 HTTPS，决定 `https` 属性。超时时间由 `VERIFY_TIMEOUT` 指定（默认 10 秒）。超过 `MAX_FAIL_COUNT` 的代理会被移除。当代理池数量低于 `POOL_SIZE_MIN`（默认 20）时触发重新爬取。校验通过时还会写入 `region`（CSDN 接口返回的中文地区）和 `anonymous`（0-透明 / 1-匿名 / 2-高匿 / -1-检测失败）属性。
 - **API** (`api/proxyApi.py`)：Flask 接口，包含以下端点：
-  - `/get`：随机获取一个代理（`?type=https` 可筛选 HTTPS 代理）
+  - `/get`：随机获取一个代理（`?type=https` 筛选 HTTPS；`?region=广东` 按中文地区筛选；`?anonymous=2` 按匿名度筛选）
   - `/pop`：获取并删除一个代理
   - `/all`：列出所有代理
   - `/count`：代理数量统计

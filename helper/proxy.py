@@ -8,6 +8,7 @@
 -------------------------------------------------
    Change Activity:
                    2019/7/11: 代理对象类型封装
+                    2026/10/12: 合并PR#694 新增anonymous setter
 -------------------------------------------------
 """
 __author__ = 'JHao'
@@ -129,6 +130,10 @@ class Proxy(object):
     @region.setter
     def region(self, value):
         self._region = value
+
+    @anonymous.setter
+    def anonymous(self, value):
+        self._anonymous = value
 
     def add_source(self, source_str):
         if source_str:

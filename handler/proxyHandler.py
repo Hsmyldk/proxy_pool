@@ -9,6 +9,7 @@
    Change Activity:
                    2016/12/03:
                    2020/05/26: 区分http和https
+                    2026/10/12: 合并PR#694 region/anonymous筛选
 -------------------------------------------------
 """
 __author__ = 'JHao'
@@ -26,14 +27,16 @@ class ProxyHandler(object):
         self.db = DbClient(self.conf.dbConn)
         self.db.changeTable(self.conf.tableName)
 
-    def get(self, https=False):
+    def get(self, https=False, region='', anonymous=-1):
         """
         return a proxy
         Args:
             https: True/False
+            region: 代理地区关键字(子串匹配), 空串不筛选
+            anonymous: 匿名度 0-透明 / 1-匿名 / 2-高匿, -1 不筛选
         Returns:
         """
-        proxy = self.db.get(https)
+        proxy = self.db.get(https, region, anonymous)
         return Proxy.createFromJson(proxy) if proxy else None
 
     def pop(self, https):

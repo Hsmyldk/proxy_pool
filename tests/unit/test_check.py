@@ -23,9 +23,10 @@ from helper.check import DoValidator, _ThreadChecker
 class TestDoValidator:
     """DoValidator.validator 测试"""
 
+    @patch("helper.check.DoValidator.anonymousValidator", return_value=2)
     @patch("helper.check.ConfigHandler")
     @patch("helper.check.ProxyValidator")
-    def test_validator_http_pass_https_pass(self, mock_pv_cls, mock_conf_cls):
+    def test_validator_http_pass_https_pass(self, mock_pv_cls, mock_conf_cls, mock_anon):
         """HTTP 通过 + HTTPS 通过 -> https=True, fail_count 不变"""
         mock_pv = MagicMock()
         mock_pv.http_validator = [MagicMock(return_value=True)]
@@ -48,10 +49,13 @@ class TestDoValidator:
         assert result.last_status is True
         assert result.check_count == 1
         assert result.fail_count == 0
+        assert result.anonymous == 2
+        mock_anon.assert_called_once_with("1.2.3.4:8080", True)
 
+    @patch("helper.check.DoValidator.anonymousValidator", return_value=1)
     @patch("helper.check.ConfigHandler")
     @patch("helper.check.ProxyValidator")
-    def test_validator_http_pass_https_fail(self, mock_pv_cls, mock_conf_cls):
+    def test_validator_http_pass_https_fail(self, mock_pv_cls, mock_conf_cls, mock_anon):
         """HTTP 通过 + HTTPS 失败 -> https=False"""
         mock_pv_cls.http_validator = [MagicMock(return_value=True)]
         mock_pv_cls.https_validator = [MagicMock(return_value=False)]
@@ -66,11 +70,14 @@ class TestDoValidator:
 
         assert result.https is False
         assert result.last_status is True
+        # 匿名度检测使用刚判定的 https 值
+        mock_anon.assert_called_once_with("1.2.3.4:8080", False)
 
+    @patch("helper.check.DoValidator.anonymousValidator")
     @patch("helper.check.ConfigHandler")
     @patch("helper.check.ProxyValidator")
-    def test_validator_http_fail(self, mock_pv_cls, mock_conf_cls):
-        """HTTP 失败 -> fail_count += 1, last_status=False"""
+    def test_validator_http_fail(self, mock_pv_cls, mock_conf_cls, mock_anon):
+        """HTTP 失败 -> fail_count += 1, last_status=False, 不检测匿名度"""
         mock_pv_cls.http_validator = [MagicMock(return_value=False)]
 
         mock_conf = MagicMock()
@@ -84,10 +91,12 @@ class TestDoValidator:
 
         assert result.last_status is False
         assert result.fail_count == 1
+        mock_anon.assert_not_called()
 
+    @patch("helper.check.DoValidator.anonymousValidator", return_value=2)
     @patch("helper.check.ConfigHandler")
     @patch("helper.check.ProxyValidator")
-    def test_validator_fail_count_decrement(self, mock_pv_cls, mock_conf_cls):
+    def test_validator_fail_count_decrement(self, mock_pv_cls, mock_conf_cls, mock_anon):
         """HTTP 通过 + fail_count > 0 -> fail_count -= 1"""
         mock_pv_cls.http_validator = [MagicMock(return_value=True)]
         mock_pv_cls.https_validator = [MagicMock(return_value=True)]
@@ -103,11 +112,12 @@ class TestDoValidator:
 
         assert result.fail_count == 2
 
-    @patch("helper.check.DoValidator.regionGetter", return_value="US")
+    @patch("helper.check.DoValidator.anonymousValidator", return_value=2)
+    @patch("helper.check.DoValidator.region_get", return_value="广东省深圳市")
     @patch("helper.check.ConfigHandler")
     @patch("helper.check.ProxyValidator")
-    def test_validator_raw_sets_region(self, mock_pv_cls, mock_conf_cls, mock_region):
-        """work_type='raw' + proxyRegion=True -> regionGetter 被调用"""
+    def test_validator_sets_region(self, mock_pv_cls, mock_conf_cls, mock_region, mock_anon):
+        """proxyRegion=True -> region_get 被调用并写入 region"""
         mock_pv_cls.http_validator = [MagicMock(return_value=True)]
         mock_pv_cls.https_validator = [MagicMock(return_value=True)]
 
@@ -117,21 +127,23 @@ class TestDoValidator:
         proxy = Proxy("1.2.3.4:8080", source="test")
 
         with patch.object(DoValidator, "conf", mock_conf):
-            result = DoValidator.validator(proxy, "raw")
+            result = DoValidator.validator(proxy, "use")
 
-        assert result.region == "US"
-        mock_region.assert_called_once_with(proxy)
+        assert result.region == "广东省深圳市"
+        mock_region.assert_called_once_with("1.2.3.4:8080")
 
-    @patch("helper.check.DoValidator.regionGetter")
+    @patch("helper.check.DoValidator.anonymousValidator", return_value=2)
+    @patch("helper.check.DoValidator.region_get")
     @patch("helper.check.ConfigHandler")
     @patch("helper.check.ProxyValidator")
-    def test_validator_use_skips_region(self, mock_pv_cls, mock_conf_cls, mock_region):
-        """work_type='use' -> 不调用 regionGetter"""
+    def test_validator_skips_region_when_disabled(self, mock_pv_cls, mock_conf_cls,
+                                                  mock_region, mock_anon):
+        """proxyRegion=False -> 不调用 region_get"""
         mock_pv_cls.http_validator = [MagicMock(return_value=True)]
         mock_pv_cls.https_validator = [MagicMock(return_value=True)]
 
         mock_conf = MagicMock()
-        mock_conf.proxyRegion = True
+        mock_conf.proxyRegion = False
 
         proxy = Proxy("1.2.3.4:8080", source="test")
 
@@ -140,31 +152,164 @@ class TestDoValidator:
 
         mock_region.assert_not_called()
 
+    @patch("helper.check.DoValidator.anonymousValidator", return_value=2)
+    @patch("helper.check.DoValidator.region_get")
+    @patch("helper.check.ConfigHandler")
+    @patch("helper.check.ProxyValidator")
+    def test_validator_keeps_existing_region(self, mock_pv_cls, mock_conf_cls,
+                                             mock_region, mock_anon):
+        """region 已有有效值 -> 不重复查询"""
+        mock_pv_cls.http_validator = [MagicMock(return_value=True)]
+        mock_pv_cls.https_validator = [MagicMock(return_value=True)]
 
-class TestRegionGetter:
-    """DoValidator.regionGetter 测试"""
+        mock_conf = MagicMock()
+        mock_conf.proxyRegion = True
 
-    @patch("helper.check.WebRequest")
-    def test_success_returns_country_code(self, mock_wr_cls):
-        """正常返回 -> country_code"""
-        mock_wr = MagicMock()
-        mock_wr.get.return_value.json = {"country_code": "CN"}
-        mock_wr_cls.return_value = mock_wr
+        proxy = Proxy("1.2.3.4:8080", source="test")
+        proxy.region = "广东省深圳市"
 
-        proxy = Proxy("1.2.3.4:8080")
-        result = DoValidator.regionGetter(proxy)
-        assert result == "CN"
+        with patch.object(DoValidator, "conf", mock_conf):
+            result = DoValidator.validator(proxy, "use")
 
-    @patch("helper.check.WebRequest")
-    def test_exception_returns_error(self, mock_wr_cls):
-        """异常 -> 'error'"""
-        mock_wr = MagicMock()
-        mock_wr.get.side_effect = Exception("timeout")
-        mock_wr_cls.return_value = mock_wr
+        assert result.region == "广东省深圳市"
+        mock_region.assert_not_called()
 
-        proxy = Proxy("1.2.3.4:8080")
-        result = DoValidator.regionGetter(proxy)
-        assert result == "error"
+    @patch("helper.check.DoValidator.anonymousValidator", return_value=2)
+    @patch("helper.check.DoValidator.region_get", return_value="广东省深圳市")
+    @patch("helper.check.ConfigHandler")
+    @patch("helper.check.ProxyValidator")
+    def test_validator_refreshes_failed_region(self, mock_pv_cls, mock_conf_cls,
+                                               mock_region, mock_anon):
+        """region 为失败值 -> 重新查询"""
+        mock_pv_cls.http_validator = [MagicMock(return_value=True)]
+        mock_pv_cls.https_validator = [MagicMock(return_value=True)]
+
+        mock_conf = MagicMock()
+        mock_conf.proxyRegion = True
+
+        proxy = Proxy("1.2.3.4:8080", source="test")
+        proxy.region = "未知或请求失败"
+
+        with patch.object(DoValidator, "conf", mock_conf):
+            result = DoValidator.validator(proxy, "use")
+
+        assert result.region == "广东省深圳市"
+        mock_region.assert_called_once_with("1.2.3.4:8080")
+
+
+class TestRegionGet:
+    """DoValidator.region_get 测试"""
+
+    @patch("helper.check.requests.get")
+    def test_success_returns_address(self, mock_get):
+        """CSDN 正常返回 -> 中文地址, 不再回退"""
+        resp = MagicMock()
+        resp.text = '{"data": {"address": "广东省深圳市"}}'
+        mock_get.return_value = resp
+
+        result = DoValidator.region_get("1.2.3.4:8080")
+        assert result == "广东省深圳市"
+        assert mock_get.call_count == 1
+
+    @patch("helper.check.requests.get")
+    def test_fallback_to_ipapi_when_csdn_forbidden(self, mock_get):
+        """CSDN 403(非JSON) -> 回退 ip-api 并返回中文地区"""
+        csdn = MagicMock(text='<html>403 Forbidden</html>')
+        ipapi = MagicMock(
+            text='{"status": "success", "country": "美国", "regionName": "弗吉尼亚州"}')
+        mock_get.side_effect = [csdn, ipapi]
+
+        result = DoValidator.region_get("8.8.8.8:8080")
+        assert result == "美国弗吉尼亚州"
+        assert mock_get.call_count == 2
+
+    @patch("helper.check.requests.get")
+    def test_ipapi_quota_exceeded_returns_unknown(self, mock_get):
+        """ip-api 返回 status=fail(限流等) -> '未知或请求失败'"""
+        csdn = MagicMock(text='<html>403</html>')
+        ipapi = MagicMock(text='{"status": "fail", "message": "quota exceeded"}')
+        mock_get.side_effect = [csdn, ipapi]
+
+        result = DoValidator.region_get("1.2.3.4:8080")
+        assert result == "未知或请求失败"
+
+    @patch("helper.check.requests.get")
+    def test_all_sources_failed_returns_unknown(self, mock_get):
+        """所有数据源异常 -> '未知或请求失败'"""
+        mock_get.side_effect = Exception("timeout")
+
+        result = DoValidator.region_get("1.2.3.4:8080")
+        assert result == "未知或请求失败"
+
+    @patch("helper.check.requests.get")
+    def test_auth_proxy_queries_ip_only(self, mock_get):
+        """user:pass@ip:port -> 只查询IP部分"""
+        resp = MagicMock()
+        resp.text = '{"data": {"address": "美国"}}'
+        mock_get.return_value = resp
+
+        DoValidator.region_get("user:pass@1.2.3.4:8080")
+        assert mock_get.call_args[1]["params"] == {"ip": "1.2.3.4"}
+
+
+class TestAnonymousValidator:
+    """DoValidator.anonymousValidator 测试"""
+
+    @patch("helper.check.requests.get")
+    def test_transparent_when_origin_has_comma(self, mock_get):
+        """origin 含逗号(暴露真实IP链) -> 0"""
+        resp = MagicMock()
+        resp.text = '{"origin": "1.1.1.1, 2.2.2.2", "headers": {}}'
+        mock_get.return_value = resp
+
+        assert DoValidator.anonymousValidator("1.2.3.4:8080", False) == 0
+
+    @patch("helper.check.requests.get")
+    def test_anonymous_when_proxy_connection_header(self, mock_get):
+        """带 Proxy-Connection 头(暴露代理身份) -> 1"""
+        resp = MagicMock()
+        resp.text = '{"origin": "1.1.1.1", "headers": {"Proxy-Connection": "keep-alive"}}'
+        mock_get.return_value = resp
+
+        assert DoValidator.anonymousValidator("1.2.3.4:8080", False) == 1
+
+    @patch("helper.check.requests.get")
+    def test_elite_when_clean(self, mock_get):
+        """既无多IP也无代理头 -> 2"""
+        resp = MagicMock()
+        resp.text = '{"origin": "1.1.1.1", "headers": {"Host": "httpbin.org"}}'
+        mock_get.return_value = resp
+
+        assert DoValidator.anonymousValidator("1.2.3.4:8080", False) == 2
+
+    @patch("helper.check.requests.get")
+    def test_https_uses_https_target(self, mock_get):
+        """https=True -> 请求 https 目标并使用 https 代理"""
+        resp = MagicMock()
+        resp.text = '{"origin": "1.1.1.1", "headers": {}}'
+        mock_get.return_value = resp
+
+        DoValidator.anonymousValidator("1.2.3.4:8080", True)
+
+        args, kwargs = mock_get.call_args
+        assert args[0] == 'https://httpbin.org/get'
+        assert kwargs["proxies"] == {'https': 'https://1.2.3.4:8080'}
+
+    @patch("helper.check.requests.get")
+    def test_exception_returns_minus_one(self, mock_get):
+        """请求异常 -> -1"""
+        mock_get.side_effect = Exception("timeout")
+
+        assert DoValidator.anonymousValidator("1.2.3.4:8080", False) == -1
+
+    @patch("helper.check.requests.get")
+    def test_invalid_json_returns_minus_one(self, mock_get):
+        """响应非JSON -> -1"""
+        resp = MagicMock()
+        resp.text = 'not a json'
+        mock_get.return_value = resp
+
+        assert DoValidator.anonymousValidator("1.2.3.4:8080", False) == -1
 
 
 def _make_checker(work_type, proxy_handler, conf=None):

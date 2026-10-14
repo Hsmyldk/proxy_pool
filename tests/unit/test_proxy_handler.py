@@ -48,7 +48,7 @@ class TestProxyHandlerGet:
         assert result is not None
         assert result.proxy == "1.2.3.4:8080"
         assert result.https is False
-        handler._mock_db.get.assert_called_once_with(False)
+        handler._mock_db.get.assert_called_once_with(False, '', -1)
 
     def test_get_returns_none_when_empty(self):
         """DbClient 返回 None -> None"""
@@ -69,7 +69,16 @@ class TestProxyHandlerGet:
 
         assert result is not None
         assert result.https is True
-        handler._mock_db.get.assert_called_once_with(True)
+        handler._mock_db.get.assert_called_once_with(True, '', -1)
+
+    def test_get_region_and_anonymous_forwarded(self):
+        """region/anonymous 转发给 DbClient"""
+        handler = _make_handler()
+        handler._mock_db.get.return_value = None
+
+        handler.get(https=False, region="广东", anonymous=2)
+
+        handler._mock_db.get.assert_called_once_with(False, "广东", 2)
 
 
 class TestProxyHandlerPop:

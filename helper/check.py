@@ -10,14 +10,17 @@
                    2019/08/06: 执行代理校验
                    2021/05/25: 分别校验http和https
                    2022/08/16: 获取代理Region信息
+                   2026/10/12: 合并PR#694 region/anonymous筛选
 -------------------------------------------------
 """
 __author__ = 'JHao'
 
+import json
+import requests
+
 from util.six import Empty
 from threading import Thread
 from datetime import datetime
-from util.webRequest import WebRequest
 from handler.logHandler import LogHandler
 from helper.validator import ProxyValidator
 from handler.proxyHandler import ProxyHandler
@@ -49,8 +52,10 @@ class DoValidator(object):
             if proxy.fail_count > 0:
                 proxy.fail_count -= 1
             proxy.https = True if https_r else False
-            if work_type == "raw":
-                proxy.region = cls.regionGetter(proxy) if cls.conf.proxyRegion else ""
+            # region是IP的固有属性, 已有有效值时不再重复查询(避免地区接口限流)
+            if cls.conf.proxyRegion and (not proxy.region or proxy.region == '未知或请求失败'):
+                proxy.region = cls.region_get(proxy.proxy)
+            proxy.anonymous = cls.anonymousValidator(proxy.proxy, proxy.https)
         else:
             proxy.fail_count += 1
         return proxy
@@ -77,13 +82,55 @@ class DoValidator(object):
         return True
 
     @classmethod
-    def regionGetter(cls, proxy):
+    def region_get(cls, proxy):
+        """ 获取代理地区(中文地址): 依次尝试多个数据源 """
+        ip = proxy.split('@')[-1].split(':')[0]
+
+        # 1. PR#694 使用的CSDN接口(部分网络下返回403, 故需要回退)
         try:
-            url = 'https://api.ip.sb/geoip/%s' % proxy.proxy.split(':')[0]
-            r = WebRequest().get(url=url, retry_time=1, timeout=2).json
-            return r.get('country_code')
+            r = requests.get(url='https://searchplugin.csdn.net/api/v1/ip/get',
+                             params={'ip': ip}, timeout=2)
+            return json.loads(r.text)['data']['address']
         except:
-            return 'error'
+            pass
+
+        # 2. 回退: ip-api.com 免费接口, lang=zh-CN 返回中文地区
+        try:
+            r = requests.get(url='http://ip-api.com/json/%s' % ip,
+                             params={'lang': 'zh-CN'}, timeout=3)
+            data = json.loads(r.text)
+            if data.get('status') == 'success':
+                return '%s%s' % (data.get('country') or '', data.get('regionName') or '')
+        except:
+            pass
+
+        return '未知或请求失败'
+
+    @classmethod
+    def anonymousValidator(cls, proxy, https):
+        """
+        判断代理匿名度
+        Returns:
+            0-透明(暴露真实IP) / 1-匿名(暴露代理身份) / 2-高匿 / -1-检测失败
+        """
+        if https:
+            url = 'https://httpbin.org/get'
+            proxies = {'https': 'https://%s' % proxy}
+        else:
+            url = 'http://httpbin.org/get'
+            proxies = {'http': 'http://%s' % proxy}
+
+        try:
+            r = requests.get(url, proxies=proxies, timeout=cls.conf.verifyTimeout, verify=False)
+            data = json.loads(r.text)
+            if ',' in (data.get('origin') or ''):
+                return 0
+            elif data.get('headers', {}).get('Proxy-Connection', False):
+                return 1
+            else:
+                return 2
+        except:
+            return -1
 
 
 class _ThreadChecker(Thread):

@@ -19,6 +19,9 @@
 11. 移除失效代理源 **66代理 (ip66)**; (2026-06-08)
 12. 新增代理源 **RoundProxies**; (2026-06-09)
 13. 移除失效代理源 **免费代理库 (jiangxianli)**; (2026-06-09)
+14. **合并 PR #694**: `/get` 接口支持 `region`（中文地区）与 `anonymous`（匿名度）筛选，新增代理匿名度检测; (2026-10-12)
+15. 代理可用性校验目标改为 `http://httpbin.org/uuid` 与 `http://geo.brdtest.com/welcome.txt` 随机二选一; (2026-10-12)
+16. 新增代理源 **OpenProxyList** (`openproxylist.py`) 与 **SCDN Text** (`scdntext.py`, 单轮随机采样300条); (2026-10-12)
 
 
 

@@ -10,6 +10,7 @@
    Change Activity:
                    2016/12/02:   DB工厂类
                    2020/07/03:   取消raw_proxy储存
+                    2026/10/12:   合并PR#694 get支持region与anonymous筛选
 -------------------------------------------------
 """
 __author__ = 'JHao'
@@ -86,8 +87,8 @@ class DbClient(withMetaclass(Singleton)):
                                                                                      password=self.db_pwd,
                                                                                      db=self.db_name)
 
-    def get(self, https, **kwargs):
-        return self.client.get(https, **kwargs)
+    def get(self, https, region='', anonymous=-1, **kwargs):
+        return self.client.get(https, region, anonymous, **kwargs)
 
     def put(self, key, **kwargs):
         return self.client.put(key, **kwargs)

@@ -64,6 +64,55 @@ class TestSsdbPutGet:
         assert result is None
 
 
+class TestSsdbGetFilter:
+    """region / anonymous 筛选测试"""
+
+    @staticmethod
+    def _proxy(proxy_str, region="", anonymous="", https=False):
+        p = Proxy(proxy_str, source="test", https=https)
+        p.region = region
+        p.anonymous = anonymous
+        return p
+
+    def test_get_by_region(self, ssdb_client):
+        ssdb_client.put(self._proxy("1.2.3.4:8080", region="广东省深圳市"))
+        ssdb_client.put(self._proxy("5.6.7.8:8080", region="美国"))
+
+        result = ssdb_client.get(https=False, region="广东")
+        assert result is not None
+        assert json.loads(result)["region"] == "广东省深圳市"
+
+    def test_get_by_region_no_match(self, ssdb_client):
+        ssdb_client.put(self._proxy("1.2.3.4:8080", region="美国"))
+        assert ssdb_client.get(https=False, region="广东") is None
+
+    def test_get_by_anonymous(self, ssdb_client):
+        ssdb_client.put(self._proxy("1.2.3.4:8080", anonymous=0))
+        ssdb_client.put(self._proxy("5.6.7.8:8080", anonymous=2))
+
+        result = ssdb_client.get(https=False, anonymous=2)
+        assert result is not None
+        assert json.loads(result)["anonymous"] == 2
+
+    def test_get_combined_filters(self, ssdb_client):
+        ssdb_client.put(self._proxy("1.2.3.4:8080", region="广东省深圳市", anonymous=2))
+        ssdb_client.put(self._proxy("5.6.7.8:8080", region="广东省深圳市", anonymous=0))
+
+        result = ssdb_client.get(https=False, region="广东", anonymous=2)
+        assert result is not None
+        assert json.loads(result)["anonymous"] == 2
+
+    def test_get_filter_combined_with_https(self, ssdb_client):
+        ssdb_client.put(self._proxy("1.2.3.4:8080", region="广东", https=False))
+        ssdb_client.put(self._proxy("5.6.7.8:443", region="广东", https=True))
+
+        result = ssdb_client.get(https=True, region="广东")
+        assert result is not None
+        data = json.loads(result)
+        assert data["https"] is True
+        assert data["proxy"] == "5.6.7.8:443"
+
+
 class TestSsdbExists:
 
     def test_exists_true(self, ssdb_client):

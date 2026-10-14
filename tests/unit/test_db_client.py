@@ -98,8 +98,13 @@ class TestDbClientDelegation:
         db = self._make_client()
         db.client.get.return_value = '{"proxy": "1.2.3.4:8080"}'
         result = db.get(True)
-        db.client.get.assert_called_once_with(True)
+        db.client.get.assert_called_once_with(True, '', -1)
         assert result == '{"proxy": "1.2.3.4:8080"}'
+
+    def test_get_forwards_region_and_anonymous(self):
+        db = self._make_client()
+        db.get(True, '广东', 2)
+        db.client.get.assert_called_once_with(True, '广东', 2)
 
     def test_put(self):
         db = self._make_client()

@@ -1,0 +1,22 @@
+# 版本控制 / CI
+.git
+.github
+.gitignore
+
+# 本地虚拟环境(容器内使用系统 python, 无需复制)
+.venv
+venv
+env
+
+# Python 缓存
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# 运行期产物
+proxy_pool.pid
+
+# 编辑器
+.idea/
+.vscode/

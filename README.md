@@ -1,4 +1,3 @@
-
 ProxyPool 爬虫代理IP池
 =======
 [![Tests](https://github.com/jhao104/proxy_pool/actions/workflows/test.yml/badge.svg)](https://github.com/jhao104/proxy_pool/actions/workflows/test.yml)
@@ -23,21 +22,26 @@ ProxyPool 爬虫代理IP池
 
 * 文档: [document](https://jhao104.github.io/proxy_pool/)
 
-* 支持版本: 
-[![](https://img.shields.io/badge/Python-3.8-blue.svg)](https://docs.python.org/3.8/)
-[![](https://img.shields.io/badge/Python-3.9-blue.svg)](https://docs.python.org/3.9/)
-[![](https://img.shields.io/badge/Python-3.10-blue.svg)](https://docs.python.org/3.10/)
-[![](https://img.shields.io/badge/Python-3.11-blue.svg)](https://docs.python.org/3.11/)
+* 支持版本:
+  [![](https://img.shields.io/badge/Python-3.8-blue.svg)](https://docs.python.org/3.8/)
+  [![](https://img.shields.io/badge/Python-3.9-blue.svg)](https://docs.python.org/3.9/)
+  [![](https://img.shields.io/badge/Python-3.10-blue.svg)](https://docs.python.org/3.10/)
+  [![](https://img.shields.io/badge/Python-3.11-blue.svg)](https://docs.python.org/3.11/)
 
 * 测试地址: http://demo.spiderpy.cn (勿压谢谢)
 
-* 付费代理推荐: [亮数据 Bright Data](https://get.brightdata.com/github_jh)（前身 Luminati）.全球代理与网络抓取行业头部领导者。覆盖 195+ 国家的 1.5亿+ 真人住宅IP，亲测成功率极高，轻松突破反爬封锁。需要高质量代理IP的可以注册后联系中文客服。[申请免费试用](https://get.brightdata.com/github_jh) (PS:用不明白的同学可以参考这个[使用教程](https://www.cnblogs.com/jhao/p/15611785.html))。
+* 付费代理推荐: [亮数据 Bright Data](https://get.brightdata.com/github_jh)（前身 Luminati）.全球代理与网络抓取行业头部领导者。覆盖
+  195+ 国家的 1.5亿+
+  真人住宅IP，亲测成功率极高，轻松突破反爬封锁。需要高质量代理IP的可以注册后联系中文客服。[申请免费试用](https://get.brightdata.com/github_jh)
+  (PS:用不明白的同学可以参考这个[使用教程](https://www.cnblogs.com/jhao/p/15611785.html))。
 
-&emsp;&emsp; 想自建爬虫？接入 [Bright Data MCP Server](https://get.brightdata.com/cd3yy5)，让 Claude、Cursor、Windsurf 等 AI 助手直接实时抓取网页——自动破解验证码、绕过地区限制。[Scraper Studio](https://get.brightdata.com/cd3yy5) 支持 AI 一键生成或 JS 代码定制，全托管基础设施运行，无需自购代理、无需搭服务器，分钟级上线。所有产品底层均由同一套顶级代理网络驱动。
+&emsp;&emsp; 想自建爬虫？接入 [Bright Data MCP Server](https://get.brightdata.com/cd3yy5)，让 Claude、Cursor、Windsurf 等 AI
+助手直接实时抓取网页——自动破解验证码、绕过地区限制。[Scraper Studio](https://get.brightdata.com/cd3yy5) 支持 AI 一键生成或
+JS 代码定制，全托管基础设施运行，无需自购代理、无需搭服务器，分钟级上线。所有产品底层均由同一套顶级代理网络驱动。
 
-&emsp;&emsp; API 产品现享7折 + 免费试用额度，注册后可联系中文客服快速上手。(用不明白的同学可参考使用教程，或注册后直接使用互动 AI 智能助手)
+&emsp;&emsp; API 产品现享7折 + 免费试用额度，注册后可联系中文客服快速上手。 (用不明白的同学可参考使用教程，或注册后直接使用互动
+AI 智能助手)
 👉 [https://get.brightdata.com/cd3yy5](https://get.brightdata.com/cd3yy5)
-
 
 ### 运行项目
 
@@ -63,20 +67,17 @@ pip install -r requirements.txt
 
 ##### 更新配置:
 
-
 ```python
 # setting.py 为项目配置文件
 
 # 配置API服务
 
-HOST = "0.0.0.0"               # IP
-PORT = 5000                    # 监听端口
-
+HOST = "0.0.0.0"  # IP
+PORT = 5000  # 监听端口
 
 # 配置数据库
 
 DB_CONN = 'redis://:pwd@127.0.0.1:8888/0'
-
 
 # 配置代理源（可选）
 # 默认自动扫描 fetcher/sources/ 目录下所有 enabled=True 的代理源
@@ -100,14 +101,38 @@ python proxyPool.py server
 
 ### Docker Image
 
+* 拉取官方镜像
+
 ```bash
 docker pull jhao104/proxy_pool
 
 docker run --env DB_CONN=redis://:password@ip:port/0 -p 5010:5010 jhao104/proxy_pool:latest
 ```
+
+* 自行构建镜像
+
+```bash
+# 在项目根目录执行, 构建本地镜像
+docker build -t proxy_pool:latest .
+
+# 指定版本号 / 镜像仓库地址
+docker build -t registry.example.com/proxy_pool:2.4.0 .
+
+# 后台运行构建好的镜像
+docker run -d --name proxy_pool --env DB_CONN=redis://:password@ip:port/0 -p 5010:5010 proxy_pool:latest
+
+# 推送到镜像仓库(可选)
+docker tag proxy_pool:latest registry.example.com/proxy_pool:latest
+docker push registry.example.com/proxy_pool:latest
+```
+
+> 需要同时构建 amd64/arm64 多平台镜像时, 需先安装 buildx 插件:
+> `docker buildx build --platform linux/amd64,linux/arm64 -t registry.example.com/proxy_pool:latest --push .`
+
 ### docker-compose
 
-项目目录下运行: 
+项目目录下运行:
+
 ``` bash
 docker-compose up -d
 ```
@@ -118,15 +143,14 @@ docker-compose up -d
 
 启动web服务后, 默认配置下会开启 http://127.0.0.1:5010 的api接口服务:
 
-| api | method | Description | params|
-| ----| ---- | ---- | ----|
-| / | GET | api介绍 | None |
-| /get | GET | 随机获取一个代理| 可选参数: `?type=https` 过滤支持https的代理|
-| /pop | GET | 获取并删除一个代理| 可选参数: `?type=https` 过滤支持https的代理|
-| /all | GET | 获取所有代理 |可选参数: `?type=https` 过滤支持https的代理|
-| /count | GET | 查看代理数量 |None|
-| /delete | GET | 删除代理  |`?proxy=host:ip`|
-
+| api     | method | Description        | params                                      |
+|---------|--------|--------------------|---------------------------------------------|
+| /       | GET    | api介绍            | None                                        |
+| /get    | GET    | 随机获取一个代理   | 可选参数: `?type=https` 过滤支持https的代理 |
+| /pop    | GET    | 获取并删除一个代理 | 可选参数: `?type=https` 过滤支持https的代理 |
+| /all    | GET    | 获取所有代理       | 可选参数: `?type=https` 过滤支持https的代理 |
+| /count  | GET    | 查看代理数量       | None                                        |
+| /delete | GET    | 删除代理           | `?proxy=host:ip`                            |
 
 * 爬虫使用
 
@@ -135,11 +159,14 @@ docker-compose up -d
 ```python
 import requests
 
+
 def get_proxy():
     return requests.get("http://127.0.0.1:5010/get/").json()
 
+
 def delete_proxy(proxy):
     requests.get("http://127.0.0.1:5010/delete/?proxy={}".format(proxy))
+
 
 # your spider code
 
@@ -165,11 +192,13 @@ def getHtml():
 
 　　添加一个新的代理源方法如下:
 
-* 1、在 `fetcher/sources/` 目录下新建 `.py` 文件，继承 `BaseFetcher` 基类，声明 `name`/`url`/`enabled` 属性，实现 `fetch()` 方法以生成器(yield)形式返回`host:port`格式的代理，例如:
+* 1、在 `fetcher/sources/` 目录下新建 `.py` 文件，继承 `BaseFetcher` 基类，声明 `name`/`url`/`enabled` 属性，实现 `fetch()`
+  方法以生成器 (yield)形式返回`host:port`格式的代理，例如:
 
 ```python
 from fetcher.baseFetcher import BaseFetcher
 from util.webRequest import WebRequest
+
 
 class MyProxyFetcher(BaseFetcher):
     """我的代理源"""
@@ -192,47 +221,48 @@ class MyProxyFetcher(BaseFetcher):
 
 ### 免费代理源
 
-   目前实现的采集免费代理网站有(排名不分先后, 下面仅是对其发布的免费代理情况, 付费代理测评可以参考[这里](https://zhuanlan.zhihu.com/p/33576641)):
-   
-  | 代理名称         |  状态  | 更新速度 | 可用率 | 地址                                                | 代码                                                      |
-  |--------------|  ---- |------|-----|---------------------------------------------------|---------------------------------------------------------|
-  | 开心代理         |   ✔   | ★    | *   | [地址](http://www.kxdaili.com/)                     | [`kxdaili.py`](/fetcher/sources/kxdaili.py)             |
-  | 快代理          |  ✔    | ★    | *   | [地址](https://www.kuaidaili.com/)                  | [`kuaidaili.py`](/fetcher/sources/kuaidaili.py)         |
-  | 云代理          |  ✔    | ★    | *   | [地址](http://www.ip3366.net/)                      | [`ip3366.py`](/fetcher/sources/ip3366.py)               |
-  | 小幻代理         |  ✔    | ★    | *   | [地址](https://ip.ihuan.me/)                        | [`ihuan.py`](/fetcher/sources/ihuan.py)                 |
-  | 89代理         |  ✔    | ★★   | **  | [地址](https://www.89ip.cn)                         | [`ip89.py`](/fetcher/sources/ip89.py)                   |
-  | 稻壳代理         |  ✔    | ★★   | *** | [地址](https://www.docip.ne)                        | [`docip.py`](/fetcher/sources/docip.py)                 |
-  | 谷德代理         |  ✔    | ★★   | *** | [地址](https://www.goodips.com)                     | [`goodips.py`](/fetcher/sources/goodips.py)             |
-  | 66代理         |  ✔    | ★★   | *   | [地址](https://www.66daili.com)                     | [`daili66.py`](/fetcher/sources/daili66.py)             |
-  | Proxifly     |  ✔    | ★★   | **  | [地址](https://proxifly.dev)                        | [`proxifly.py`](/fetcher/sources/proxifly.py)           |
-  | FreeVPNNode  |  ✔    | ★★   | *   | [地址](https://cn.freevpnnode.com)                  | [`freevpnnode.py`](/fetcher/sources/freevpnnode.py)     |
-  | Geonode      |  ✔    | ★★   | **  | [地址](https://geonode.com)                         | [`geonode.py`](/fetcher/sources/geonode.py)             |
-  | RoundProxies |  ✔    | ★    | *   | [地址](https://roundproxies.com/free-proxy-list)    | [`roundproxies.py`](/fetcher/sources/roundproxies.py)   |
-  | OpenProxyList |  ✔    | ★★   | **  | [地址](https://openproxylist.com)                   | [`openproxylist.py`](/fetcher/sources/openproxylist.py) |
-  | SCDN Text    |  ✔    | ★★   | **  | [地址](https://proxy.scdn.io/)                      | [`scdntext.py`](/fetcher/sources/scdntext.py)           |
+目前实现的采集免费代理网站有 (排名不分先后, 下面仅是对其发布的免费代理情况,
+付费代理测评可以参考[这里](https://zhuanlan.zhihu.com/p/33576641)):
 
-  
-  如果还有其他好的免费代理网站, 可以在提交在[issues](https://github.com/jhao104/proxy_pool/issues/71), 下次更新时会考虑在项目中支持。
+| 代理名称      | 状态 | 更新速度 | 可用率 | 地址                                             | 代码                                                    |
+  |---------------|------|----------|--------|--------------------------------------------------|---------------------------------------------------------|
+| 开心代理      | ✔   | ★       | *      | [地址](http://www.kxdaili.com/)                  | [`kxdaili.py`](/fetcher/sources/kxdaili.py)             |
+| 快代理        | ✔   | ★       | *      | [地址](https://www.kuaidaili.com/)               | [`kuaidaili.py`](/fetcher/sources/kuaidaili.py)         |
+| 云代理        | ✔   | ★       | *      | [地址](http://www.ip3366.net/)                   | [`ip3366.py`](/fetcher/sources/ip3366.py)               |
+| 小幻代理      | ✔   | ★       | *      | [地址](https://ip.ihuan.me/)                     | [`ihuan.py`](/fetcher/sources/ihuan.py)                 |
+| 89代理        | ✔   | ★★     | **     | [地址](https://www.89ip.cn)                      | [`ip89.py`](/fetcher/sources/ip89.py)                   |
+| 稻壳代理      | ✔   | ★★     | ***    | [地址](https://www.docip.ne)                     | [`docip.py`](/fetcher/sources/docip.py)                 |
+| 谷德代理      | ✔   | ★★     | ***    | [地址](https://www.goodips.com)                  | [`goodips.py`](/fetcher/sources/goodips.py)             |
+| 66代理        | ✔   | ★★     | *      | [地址](https://www.66daili.com)                  | [`daili66.py`](/fetcher/sources/daili66.py)             |
+| Proxifly      | ✔   | ★★     | **     | [地址](https://proxifly.dev)                     | [`proxifly.py`](/fetcher/sources/proxifly.py)           |
+| FreeVPNNode   | ✔   | ★★     | *      | [地址](https://cn.freevpnnode.com)               | [`freevpnnode.py`](/fetcher/sources/freevpnnode.py)     |
+| Geonode       | ✔   | ★★     | **     | [地址](https://geonode.com)                      | [`geonode.py`](/fetcher/sources/geonode.py)             |
+| RoundProxies  | ✔   | ★       | *      | [地址](https://roundproxies.com/free-proxy-list) | [`roundproxies.py`](/fetcher/sources/roundproxies.py)   |
+| OpenProxyList | ✔   | ★★     | **     | [地址](https://openproxylist.com)                | [`openproxylist.py`](/fetcher/sources/openproxylist.py) |
+| SCDN Text     | ✔   | ★★     | **     | [地址](https://proxy.scdn.io/)                   | [`scdntext.py`](/fetcher/sources/scdntext.py)           |
+
+如果还有其他好的免费代理网站, 可以在提交在[issues](https://github.com/jhao104/proxy_pool/issues/71), 下次更新时会考虑在项目中支持。
 
 ### 问题反馈
 
-　　任何问题欢迎在[Issues](https://github.com/jhao104/proxy_pool/issues) 中反馈，同时也可以到我的[博客](http://www.spiderpy.cn/blog/message)中留言。
+　　任何问题欢迎在[Issues](https://github.com/jhao104/proxy_pool/issues)
+中反馈，同时也可以到我的[博客](http://www.spiderpy.cn/blog/message)中留言。
 
 　　你的反馈会让此项目变得更加完美。
 
 ### 贡献代码
 
-　　本项目仅作为基本的通用的代理池架构，不接收特有功能(当然,不限于特别好的idea)。
+　　本项目仅作为基本的通用的代理池架构，不接收特有功能 (当然,不限于特别好的idea)。
 
-　　本项目依然不够完善，如果发现bug或有新的功能添加，请在[Issues](https://github.com/jhao104/proxy_pool/issues)中提交bug(或新功能)描述，我会尽力改进，使她更加完美。
+　　本项目依然不够完善，如果发现bug或有新的功能添加，请在[Issues](https://github.com/jhao104/proxy_pool/issues)中提交bug
+(或新功能)描述，我会尽力改进，使她更加完美。
 
 　　这里感谢以下contributor的无私奉献：
 
 　　[@kangnwh](https://github.com/kangnwh) | [@bobobo80](https://github.com/bobobo80) | [@halleywj](https://github.com/halleywj) | [@newlyedward](https://github.com/newlyedward) | [@wang-ye](https://github.com/wang-ye) | [@gladmo](https://github.com/gladmo) | [@bernieyangmh](https://github.com/bernieyangmh) | [@PythonYXY](https://github.com/PythonYXY) | [@zuijiawoniu](https://github.com/zuijiawoniu) | [@netAir](https://github.com/netAir) | [@scil](https://github.com/scil) | [@tangrela](https://github.com/tangrela) | [@highroom](https://github.com/highroom) | [@luocaodan](https://github.com/luocaodan) | [@vc5](https://github.com/vc5) | [@1again](https://github.com/1again) | [@obaiyan](https://github.com/obaiyan) | [@zsbh](https://github.com/zsbh) | [@jiannanya](https://github.com/jiannanya) | [@Jerry12228](https://github.com/Jerry12228) | [@zeyudada](https://github.com/zeyudada)
 
-
 ### Release Notes
 
-   [changelog](https://jhao104.github.io/proxy_pool/changelog/)
+[changelog](https://jhao104.github.io/proxy_pool/changelog/)
 
 <a href="https://hellogithub.com/repository/92a066e658d147cc8bd8397a1cb88183" target="_blank"><img src="https://api.hellogithub.com/v1/widgets/recommend.svg?rid=92a066e658d147cc8bd8397a1cb88183&claim_uid=DR60NequsjP54Lc" alt="Featured｜HelloGitHub" style="width: 250px; height: 54px;" width="250" height="54" /></a>

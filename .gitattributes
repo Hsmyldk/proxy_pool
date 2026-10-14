@@ -1,0 +1,3 @@
+# 统一行尾：shell 脚本必须使用 LF
+# 否则在 Linux / Docker 容器中执行会报 "$'\r': command not found" 或 "set: -: invalid option"
+*.sh text eol=lf

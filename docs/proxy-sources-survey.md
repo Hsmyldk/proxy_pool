@@ -12,24 +12,25 @@
 实测方式：逐个调用各 fetcher 的 `fetch()` 统计产出，"单轮实测"为 2026-10-14 的真实一轮结果。 **单轮总量约 2000 条**，按 20
 线程校验估算需 10–20 分钟，与 30 分钟的采集间隔相匹配。
 
-| 源              | 类名                 | 抓取端点                                                                  | 源内条数                | `limit` | 单轮实测 | 备注                                        |
-|-----------------|----------------------|---------------------------------------------------------------------------|-------------------------|---------|----------|---------------------------------------------|
-| `scdntext`      | ScdnTextFetcher      | `proxy.scdn.io/text.php`                                                  | 数万                    | 300     | 300      |                                             |
-| `monosans`      | MonosansFetcher      | `raw.githubusercontent.com/monosans/proxy-list/main/proxies/http.txt`     | 383                     | 300     | 300      | 🆕 本次接入，质量最高                       |
-| `proxyscrape`   | ProxyScrapeFetcher   | `api.proxyscrape.com/v4/free-proxy-list/get`                              | 751(http) + 1928(https) | 200     | 200      | 🆕 本次接入                                 |
-| `spysme`        | SpysMeFetcher        | `spys.me/proxy.txt`                                                       | 400                     | 200     | 200      | 🆕 本次接入                                 |
-| `thespeedx`     | TheSpeedXFetcher     | `raw.githubusercontent.com/TheSpeedX/PROXY-List/master/http.txt`          | 2793                    | 200     | 200      | 🆕 本次接入                                 |
-| `freeproxylist` | FreeProxyListFetcher | `free-proxy-list.net` / `sslproxies.org`                                  | 400                     | 200     | 200      | 🆕 本次接入                                 |
-| `proxifly`      | ProxiFlyFetcher      | `cdn.jsdelivr.net/gh/proxifly/free-proxy-list@main/proxies/all/data.json` | 6 万+（筛 CN 后约 150） | -       | 145      | 只筛 `country=CN` + `protocol=http`         |
-| `openproxylist` | OpenProxyListFetcher | `raw.githubusercontent.com/roosterkid/openproxylist/main/HTTPS.txt`       | ~150                    | -       | 132      |                                             |
-| `scdn`          | ScdnFetcher          | `proxy.scdn.io/get_proxies.php`                                           | ~100                    | -       | 100      |                                             |
-| `geonode`       | GeonodeFetcher       | `proxylist.geonode.com/api/proxy-list`                                    | 3910                    | -       | 53       | 已修复，见下文                              |
-| `roundproxies`  | RoundProxiesFetcher  | `roundproxies.com/api/get-free-proxies/`                                  | ~50                     | -       | 50       |                                             |
-| `ip89`          | Ip89Fetcher          | `89ip.cn`                                                                 | ~40                     | -       | 40       | 国内源，仍在更新                            |
-| `ip3366`        | Ip3366Fetcher        | `ip3366.net`                                                              | ~30                     | -       | 30       | 国内源，仍在更新                            |
-| `kuaidaili`     | KuaidailiFetcher     | `kuaidaili.com/free/inha/{page}`                                          | ~24                     | -       | 24       | ⚠️ 免费页已改为 JS + RSA 加密，随时可能归零 |
-| `ihuan`         | IhuanFetcher         | `ip.ihuan.me`                                                             | ~18                     | -       | 18       | 国内源，需先取 cookie                       |
-| `goodips`       | GoodipsFetcher       | `goodips.com`                                                             | ~15                     | -       | 15       |                                             |
+| 源              | 类名                 | 抓取端点                                                                  | 源内条数                | `limit` | 单轮实测 | 备注                                          |
+|-----------------|----------------------|---------------------------------------------------------------------------|-------------------------|---------|----------|-----------------------------------------------|
+| `hproxy`        | HproxyFetcher        | `hproxy.com/api/proxy-list`                                               | 上游过滤后100           | 100     | 100      | 🆕 2026-10-15接入, 仅http/https且排除透明代理 |
+| `scdntext`      | ScdnTextFetcher      | `proxy.scdn.io/text.php`                                                  | 数万                    | 300     | 300      |                                               |
+| `monosans`      | MonosansFetcher      | `raw.githubusercontent.com/monosans/proxy-list/main/proxies/http.txt`     | 383                     | 300     | 300      | 🆕 本次接入，质量最高                         |
+| `proxyscrape`   | ProxyScrapeFetcher   | `api.proxyscrape.com/v4/free-proxy-list/get`                              | 751(http) + 1928(https) | 200     | 200      | 🆕 本次接入                                   |
+| `spysme`        | SpysMeFetcher        | `spys.me/proxy.txt`                                                       | 400                     | 200     | 200      | 🆕 本次接入                                   |
+| `thespeedx`     | TheSpeedXFetcher     | `raw.githubusercontent.com/TheSpeedX/PROXY-List/master/http.txt`          | 2793                    | 200     | 200      | 🆕 本次接入                                   |
+| `freeproxylist` | FreeProxyListFetcher | `free-proxy-list.net` / `sslproxies.org`                                  | 400                     | 200     | 200      | 🆕 本次接入                                   |
+| `proxifly`      | ProxiFlyFetcher      | `cdn.jsdelivr.net/gh/proxifly/free-proxy-list@main/proxies/all/data.json` | 6 万+（筛 CN 后约 150） | -       | 145      | 只筛 `country=CN` + `protocol=http`           |
+| `openproxylist` | OpenProxyListFetcher | `raw.githubusercontent.com/roosterkid/openproxylist/main/HTTPS.txt`       | ~150                    | -       | 132      |                                               |
+| `scdn`          | ScdnFetcher          | `proxy.scdn.io/get_proxies.php`                                           | ~100                    | -       | 100      |                                               |
+| `geonode`       | GeonodeFetcher       | `proxylist.geonode.com/api/proxy-list`                                    | 3910                    | -       | 53       | 已修复，见下文                                |
+| `roundproxies`  | RoundProxiesFetcher  | `roundproxies.com/api/get-free-proxies/`                                  | ~50                     | -       | 50       |                                               |
+| `ip89`          | Ip89Fetcher          | `89ip.cn`                                                                 | ~40                     | -       | 40       | 国内源，仍在更新                              |
+| `ip3366`        | Ip3366Fetcher        | `ip3366.net`                                                              | ~30                     | -       | 30       | 国内源，仍在更新                              |
+| `kuaidaili`     | KuaidailiFetcher     | `kuaidaili.com/free/inha/{page}`                                          | ~24                     | -       | 24       | ⚠️ 免费页已改为 JS + RSA 加密，随时可能归零   |
+| `ihuan`         | IhuanFetcher         | `ip.ihuan.me`                                                             | ~18                     | -       | 18       | 国内源，需先取 cookie                         |
+| `goodips`       | GoodipsFetcher       | `goodips.com`                                                             | ~15                     | -       | 15       |                                               |
 
 ## 二、已接入但实测失效（已加入黑名单）
 

@@ -12,6 +12,8 @@
                     2026/10/12: 校验目标改为http, 兼容仅支持HTTP转发的代理
                     2026/10/14: 采集/检查间隔可配置, 采集间隔延长至30分钟
                     2026/10/14: 新增https兜底校验开关, 失效源加入黑名单
+                    2026/10/15: 新增HProxy非透明HTTP/HTTPS代理源
+                    2026/10/15: 新增HProxy非透明HTTP/HTTPS代理源
 -------------------------------------------------
 """
 
@@ -46,7 +48,6 @@ DB_CONN = 'redis://:password@127.0.0.1:6379/0'
 
 # proxy table name
 TABLE_NAME = 'use_proxy'
-
 
 # ###### config the proxy fetch function ######
 # 自动扫描 fetcher/sources/ 目录，加载所有 enabled=True 的 fetcher

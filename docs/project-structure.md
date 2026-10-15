@@ -17,6 +17,7 @@ proxy_pool/
 │       ├── kxdaili.py      #     开心代理
 │       ├── kuaidaili.py    #     快代理
 │       ├── geonode.py      #     Geonode
+│       ├── hproxy.py       #     HProxy
 │       └── ...             #     其他代理源
 ├── handler/                # 业务处理器
 │   ├── configHandler.py    #   配置读取

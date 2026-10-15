@@ -77,6 +77,7 @@ class TestFetcherInterface(object):
         ("fetcher.sources.proxyscrape", "ProxyScrapeFetcher"),
         ("fetcher.sources.spysme", "SpysMeFetcher"),
         ("fetcher.sources.freeproxylist", "FreeProxyListFetcher"),
+        ("fetcher.sources.hproxy", "HproxyFetcher"),
     ]
 
     def test_all_fetchers_have_name_url_enabled(self):

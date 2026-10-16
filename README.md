@@ -113,10 +113,10 @@ docker run --env DB_CONN=redis://:password@ip:port/0 -p 5010:5010 jhao104/proxy_
 
 ```bash
 # 在项目根目录执行, 构建本地镜像
-docker build -t proxy_pool:latest .
+docker build -t proxy_pool:2.4.3 .
 
 # 指定版本号 / 镜像仓库地址
-docker build -t registry.example.com/proxy_pool:2.4.0 .
+docker build -t registry.example.com/proxy_pool:2.4.3 .
 
 # 后台运行构建好的镜像
 docker run -d --name proxy_pool --env DB_CONN=redis://:password@ip:port/0 -p 5010:5010 proxy_pool:latest

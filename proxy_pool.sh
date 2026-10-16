@@ -60,7 +60,7 @@ cmd_start() {
         # 前台模式（容器环境）
         log_info "Starting in foreground mode..."
 
-        trap 'log_info "Shutting down..."; kill $SERVER_PID $SCHEDULER_PID 2>/dev/null; wait; rm -f "$PID_FILE"; exit 0' EXIT INT TERM
+        trap 'log_info "Shutting down..."; kill $SERVER_PID $SCHEDULER_PID 2>/dev/null; wait; rm -f "$PID_FILE"' EXIT INT TERM
 
         $PYTHON proxyPool.py server &
         SERVER_PID=$!
@@ -72,7 +72,15 @@ cmd_start() {
         echo "$SCHEDULER_PID" >> "$PID_FILE"
 
         log_info "Services started (PIDs: $SERVER_PID $SCHEDULER_PID)"
-        wait
+
+        # 任一子进程退出就整体退出: 否则 server 崩溃后容器仍显示 Up,
+        # 但 5010 端口没有任何服务(排障时极易误判为"已正常运行")
+        if wait -n; then
+            log_info "server or scheduler exited"
+        else
+            log_error "server or scheduler exited abnormally"
+        fi
+        exit 1
     else
         # 后台模式（非容器环境）
         log_info "Starting in background mode..."

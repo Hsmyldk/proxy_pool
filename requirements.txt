@@ -1,5 +1,8 @@
 requests==2.31.0
-gunicorn==19.9.0
+# gunicorn 19.9.0 依赖 vendored six 的 gunicorn.six.moves, 在 Python 3.12 下导入即报
+# "ModuleNotFoundError: No module named 'gunicorn.six.moves'"(server 起不来), 故按版本分流
+gunicorn==19.9.0;python_version<"3.12"
+gunicorn==23.0.0;python_version>="3.12"
 lxml==4.9.2;python_version<"3.12"
 lxml==5.2.1;python_version>="3.12"
 redis>=4.2.0
